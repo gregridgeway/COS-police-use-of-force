@@ -8,10 +8,10 @@ library(dplyr)
 RcppParallel::setThreadOptions(numThreads = 12)
 
 # load C++ code for conditional likelihood calcs and acceptance probability
-source("mcmcConditionalStereotype.R")
+source("code/mcmcConditionalStereotype.R")
 
 # load SPD data
-load("dataSPD.RData")
+load("data/dataSPD.RData")
 # make 0-based for C++
 d$y     <- d$y - 1
 d$idOff <- d$idOff - 1
@@ -30,7 +30,7 @@ for(iChain in 1:4)
     sDiff0  = thetaInit[(nTotOfficers+1):(nTotOfficers+2)],
     nIter   = 1000000,
     thin    = 100, 
-    sdProp  = 0.025)  # sdProp tuned to accept 23-25%
+    sdProp  = 0.035)  # sdProp tuned to accept 23-25%
   resSPD$rateAccept
 
   thetaInit <- resSPD$draws |> tail(1) |> as.numeric()
@@ -38,6 +38,6 @@ for(iChain in 1:4)
     exp(thetaInit[(nTotOfficers+1):(nTotOfficers+2)])
 
   save(resSPD, thetaInit, 
-       file=paste0("mcmcSampSPDchain",iChain,".RData"),
+       file=paste0("output/mcmcSampSPDchain",iChain,".RData"),
        compress = TRUE)
 }
