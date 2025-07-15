@@ -5,7 +5,7 @@
 
 library(dplyr)
 
-RcppParallel::setThreadOptions(numThreads = 12)
+RcppParallel::setThreadOptions(numThreads = 8)
 
 # load C++ code for conditional likelihood calcs and acceptance probability
 source("code/mcmcConditionalStereotype.R")
@@ -30,7 +30,7 @@ for(iChain in 1:4)
     sDiff0  = thetaInit[(nTotOfficers+1):(nTotOfficers+2)],
     nIter   = 1000000,
     thin    = 100, 
-    sdProp  = 0.035)  # sdProp tuned to accept 23-25%
+    sdProp  = 0.025)  # sdProp tuned to accept 23-25%
   resSPD$rateAccept
 
   thetaInit <- resSPD$draws |> tail(1) |> as.numeric()
