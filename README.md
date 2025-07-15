@@ -20,9 +20,20 @@ This repository also contains data and code for analyzing seven years of use-of-
 
 
 # Required R packages
+`dplyr`
 `foreach`
 `Rcpp`
 `RcppParallel`
+`doParallel`
+`future`
+`doFuture`
+`progressr`
+
+`igraph`
+`xtable`
+`ggplot2`
+`ggbeeswarm`
+
 
 git commit filename -m "commit message"
 git status
