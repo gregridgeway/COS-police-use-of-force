@@ -10,6 +10,7 @@ library(ggbeeswarm)
 # 3 officers ------------------------------------------------------------------
 load("output/mcmcSampOff3.RData")
 nOff <- 3
+n_distinct(d$id)
 
 tab <- data.frame(parm=c(paste0("\\lambda_1-\\lambda_{",2:3,"}"),
                          paste0("\\mathrm{rank}(\\lambda_",1:3,")"),
@@ -55,9 +56,6 @@ postDraws <- list(lambda = res$draws[,1:nOff],
 postDraws$s <- 1 + apply(postDraws$sDelta, 1, cumsum) |> t()
 colnames(postDraws$s) <- c("s2","s3")
 
-plot(postDraws$s[,1])
-plot(postDraws$s[,2])
-
 ## Table 1, left panel --------------------------------------------------------
 a <- apply(postDraws$s, 2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
   round(2) |> t()
@@ -76,14 +74,16 @@ a <- apply(postDraws$lambda, 1, rank) |>
 i <- grep("^\\\\mathrm\\{rank\\}", tab$parm)
 tab[i,c("postmean","l95","u95")] <- a
 
+
+# "all the values of Var(λj | λi, data) were small, less than 0.042 for the 345 incident simulation"
 Sigma <- cov(postDraws$lambda)
 schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> t() |> zapsmall()
 range(schurComp[schurComp>0])
 
-pairs(postDraws$lambda, 
+# not used in article, but show pairs plot
+pairs(postDraws$lambda,
       labels=c(expression(lambda[1]),expression(lambda[2]),expression(lambda[3])),
       pch=".")
-
 plot(postDraws$s, xlab=expression(s[2]), ylab=expression(s[3]), 
      pch=".", log="xy")
 
@@ -91,16 +91,12 @@ plot(postDraws$s, xlab=expression(s[2]), ylab=expression(s[3]),
 # 3 officers, 10 incidents/officer --------------------------------------------
 load("output/mcmcSampOff3small.RData")
 nOff <- 3
-
 n_distinct(d0$id)
 
 postDraws <- list(lambda = res$draws[,1:nOff],
                   sDelta = exp(res$draws[,nOff + 1:2]))
 postDraws$s <- 1 + apply(postDraws$sDelta, 1, cumsum) |> t()
 colnames(postDraws$s) <- c("s2","s3")
-
-plot(postDraws$s[,1])
-plot(postDraws$s[,2])
 
 ## Table 1, right panel --------------------------------------------------------
 a <- apply(postDraws$s, 2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
@@ -119,7 +115,7 @@ a <- apply(postDraws$lambda, 1, rank) |>
 i <- grep("^\\\\mathrm\\{rank\\}", tab$parm)
 tab[i,c("postmeanSmall","l95small","u95small")] <- a
 
-
+# "and less than 0.20 for the 30 incident simulation"
 Sigma <- cov(postDraws$lambda)
 schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> 
   t() |> zapsmall()
@@ -225,9 +221,6 @@ postDraws <- list(lambda = res$draws[,1:nOff],
 postDraws$s <- 1 + apply(postDraws$sDelta, 1, cumsum) |> t()
 colnames(postDraws$s) <- c("s2","s3")
 
-plot(postDraws$s[,1])
-plot(postDraws$s[,2])
-
 ## Table 2, left panel --------------------------------------------------------
 a <- apply(postDraws$s, 2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975))))  |>
   round(2) |> t()
@@ -258,7 +251,7 @@ a <- apply(postDraws$lambda[,4:6], 1, rank) |>
 i <- grep("lambda_[456]", tabRanks$parm)
 tabRanks[i,c("postmean","l95","u95")] <- a
 
-
+# "With the larger simulated dataset, Var(λ−1 | λ1, data) = [0.00 0.01 0.03 0.34 0.34 0.34], signaling which officers are Officer 1's informational peer."
 Sigma <- cov(postDraws$lambda)
 schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> t() |> zapsmall()
 schurComp[1,] |> round(2)
@@ -314,11 +307,12 @@ a <- apply(postDraws$lambda[,4:6], 1, rank) |>
 i <- grep("lambda_[456]", tabRanks$parm)
 tabRanks[i,c("postmeanSmall","l95small","u95small")] <- a
 
-
+# not shown in article
 Sigma <- cov(postDraws$lambda)
 schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> 
   t() |> zapsmall()
 schurComp[1,] |> round(2)
+
 
 ## Table 2 --------------------------------------------------------------------
 tab |>
@@ -413,9 +407,6 @@ postDraws <- list(lambda = res$draws[,1:nOff],
 postDraws$s <- 1 + apply(postDraws$sDelta, 1, cumsum) |> t()
 colnames(postDraws$s) <- c("s2","s3")
 
-plot(postDraws$s[,1])
-plot(postDraws$s[,2])
-
 ## Table 3 & Table D2, left panel ----------------------------------------------
 a <- apply(postDraws$s, 2, 
            function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
@@ -456,7 +447,7 @@ a <- apply(postDraws$lambda, 1, rank) |>
 i <- grep("lambda_", tabRanks$parm)
 tabRanks[i,c("postmean","l95","u95")] <- a
 
-
+# "If we fixed the value of λ1, values of Var(λ−1 | λ1, data) range from around 0.05 for Officers 2 and 3 up to 0.13 for Officer 10."
 Sigma <- cov(postDraws$lambda)
 schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> 
   t() |> zapsmall()
@@ -468,7 +459,7 @@ a <- schurComp[1,]
 par(mai=0.02+c(0.8,0.8,0.4,0.4))
 plot((1:10), a,
      pch=16,
-     ylim=c(0,0.4),
+     ylim=c(0,0.2),
      xlab="Peer Officer ID",
      ylab=bquote("Var(" ~ lambda[-1] ~ "|" ~ lambda[1] ~ ")")) 
 
@@ -485,10 +476,6 @@ postDraws <- list(lambda = res$draws[,1:nOff],
                   sDelta = exp(res$draws[,nOff + 1:2]))
 postDraws$s <- 1 + apply(postDraws$sDelta, 1, cumsum) |> t()
 colnames(postDraws$s) <- c("s2","s3")
-
-# not used in article
-plot(postDraws$s[,1])
-plot(postDraws$s[,2])
 
 
 ## Table 3 & Table D2, right panel --------------------------------------------
@@ -530,7 +517,7 @@ a <- apply(postDraws$lambda, 1, rank) |>
 i <- grep("lambda_", tabRanks$parm)
 tabRanks[i,c("postmeanSmall","l95small","u95small")] <- a
 
-
+# not discussed in article, but show increasing trend in conditional variance
 Sigma <- cov(postDraws$lambda)
 schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> 
   t() |> zapsmall()
@@ -577,7 +564,8 @@ tabRanks |>
         include.rownames = FALSE)
 
 
-# additional stats computed in Section 4.3
+# Section 4.3
+# "The model estimates that with 0.95 posterior probability Officer 8 is among the two officers with the smallest λ (in truth it is the smallest). The posterior probability that Officer 5 has the largest λ is 0.48 and a 0.86 probability that it is among the top two (in truth it is the largest)."
 R <- apply(postDraws$lambda, 1, rank)
 #   is 8 the smallest?
 apply(R, 2, function(x) x[8] <= 2) |> mean()
@@ -626,6 +614,7 @@ for(iChain in 1:length(chains))
 }
 
 burnin <- 200
+chains <- lapply(chains, function(x) x[-(1:burnin),])
 postDraws <- do.call(rbind, chains)
 
 ## Table 4 --------------------------------------------------------------------
@@ -726,15 +715,13 @@ ggplot(df, aes(x = "", y = x, colour = group)) +
 
 ## Figure 6 -------------------------------------------------------------------
 iID <- 1006
-schurComp <- diag(Sigma) - Sigma[,iID]^2/Sigma[iID,iID]
-# log scale
 par(mai=0.02+c(0.8,0.4,0.4,0.4))
-hist(schurComp, axes=FALSE, ylab="", main="", 
+hist(schurComp[iID,], axes=FALSE, ylab="", main="", 
      xlab=bquote("Var(" ~ lambda[-1006] ~ "|" ~ lambda[1006] ~ ")"),
      breaks = 30)
 axis(1)
 
-sum(schurComp<0.3)
+sum(schurComp[iID,]<=0.3)
 
 
 # get all 1006 connected officers including incidents not involving 1006
@@ -743,6 +730,7 @@ a <- d |>
                filter(id %in% d$id[d$idOff==iID]) |>
                select(idOff) |>
                distinct())
+
 
 n_distinct(a$id)
 n_distinct(a$idOff)
@@ -761,11 +749,12 @@ col[which(names(V(net))==iID)] <- "lightblue"
 
 # highlight nodes with high conditional variance
 i <- V(net) |> names() |> as.numeric()
-i <- i[schurComp[i] > 0.6]
+i <- i[schurComp[iID,i] > 0.6]
 border.col <- rep("black", length(unique(a$idOff)))
 border.col[which(names(V(net))==i)] <- "red"
 
 ## Figure 5 -------------------------------------------------------------------
+# Note: plot.igraph() layout changes each time generated
 par(mai=c(0,0,0,0))
 plot(net,
      edge.width=b$n,
@@ -779,11 +768,11 @@ igraph::E(net)
 # tk_coords(1)
 
 # conditional variances discussed in Section 5
-schurComp[c(536, 993, 1018, 1033, 232, 435)] |> round(2)
+schurComp[iID, c(536, 993, 1018, 1033, 232, 435)] |> round(2)
 
 # Figure 7 --------------------------------------------------------------------
 ## create set O_i, with t<0.3
-iPeers <- which(schurComp < 0.3)
+iPeers <- which(schurComp[iID,] < 0.3)
 R <- apply(postDraws[,iPeers], 1, rank)
 Rpostint <- apply(R, 1, quantile, prob=c(0.025,0.5,0.975))
 j <- order(Rpostint[2,])
@@ -847,9 +836,9 @@ net <- graph_from_data_frame(b, directed=FALSE)
 
 # "All but two of the 1,503 officers are members of a connected network"
 net |> components() |> purrr::pluck("csize")
+# "...with an average distance of 2.1 and a maximum distance of 5 separating officers,"
 i <- net |> components() |> purrr::pluck("membership")
 net <- net |> delete_vertices(which(i==2))
-# "...with an average distance of 2.1 and a maximum distance of 5 separating officers,"
 net |> distances() |> table() 
-net |> distances() |> mean() 
+net |> distances() |> mean() |> round(1)
 
