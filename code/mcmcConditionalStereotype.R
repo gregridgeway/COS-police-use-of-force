@@ -1,7 +1,7 @@
 library(foreach)
 
 message("Compiling C++ code...")
-Rcpp::sourceCpp("conditional_stereotype.cpp")
+Rcpp::sourceCpp("code/conditional_stereotype.cpp")
 
 logPriorLambdaS <- function(lambda,logSDiff)
 {
