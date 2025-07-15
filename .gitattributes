@@ -1,0 +1,2 @@
+output/mcmcSampSPDchain*.* filter=lfs diff=lfs merge=lfs -text
+output/mcmcSampSPDchain*.* filter=lfs diff=lfs merge=lfs -text
