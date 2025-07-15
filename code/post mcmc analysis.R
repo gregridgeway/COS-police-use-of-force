@@ -1,8 +1,6 @@
 library(dplyr)
 library(igraph)
 library(xtable)
-
-library(doParallel)
 library(future)
 library(doFuture)
 library(progressr)
@@ -588,7 +586,8 @@ apply(R, 2, function(x) x[5] == 10) |> mean()
 apply(R, 2, function(x) x[5] >= 9)  |> mean()
 
 
-# Seattle ----
+
+# Seattle ---------------------------------------------------------------------
 load("data/dataSPD.RData")
 
 # Section 5 stats
@@ -627,31 +626,24 @@ for(iChain in 1:length(chains))
 }
 
 burnin <- 200
-chains <- lapply(chains, function(x) x[-(1:burnin),])
+postDraws <- do.call(rbind, chains)
 
-rvarDraws <- as_draws_rvars(chains) |>
-  as_draws_array()
-apply(rvarDraws[,,1504:1507], 3, ess_bulk)
-apply(rvarDraws[,,1504:1507], 3, ess_tail)
-apply(rvarDraws[,,1504:1507], 3, posterior::rhat)
-apply(rvarDraws[,,1504:1507], 3, mcse_mean)
-
-postDraws <- as_draws_matrix(rvarDraws)
-
-rvarDraws[,,1504:1507] |> 
-  apply(3, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+## Table 4 --------------------------------------------------------------------
+postDraws[,1504:1507] |> 
+  apply(2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
   round(2) |> t()
 
 
-
-# find local outliers based on diag of Schur complement
-# Schur complement
+# Find officers' peer groups, described in Section 3.4
+#   compute rank of first value relative to the rest
 rank1 <- function(x)
 {
   1+sum(x[1]>x[-1])
 }
 
-# schurComp = Cov(lambda[j]|lambda[i])
+# Schur complement calculation
+#   schurComp = Var(lambda[-i]|lambda[i])
+#   formula from Section 3.4
 Sigma <- cov(postDraws[,1:nOff])
 schurComp <- sapply(1:nOff, 
                     function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> 
@@ -659,6 +651,7 @@ schurComp <- sapply(1:nOff,
 
 # about 20 minutes
 #   use 4 cores... can be memory intensive
+#   can run load("output/resultsSPD.RData") to skip this step
 plan(multisession, workers = 4)
 registerDoFuture()
 handlers("cli")
@@ -668,25 +661,25 @@ with_progress({
   
   resultsSchur <- foreach(iID=1:nOff, .combine=rbind) %dopar%
   {
-  # schurComp <- diag(Sigma)[-iID] - Sigma[-iID,iID]^2/Sigma[iID,iID]
-  p(sprintf("Processing officer %d", iID))
-  iPeers <- (1:nOff)[schurComp[iID,] < 0.3] |> setdiff(iID)
-  R <- apply(postDraws[, c(iID,iPeers)], 1, rank1)
-  
-  res <- data.frame(idOff=iID,
-                    nOff = length(iPeers),
-                    nInc = sum(d$idOff==iID),
-                    pRankTop5pct = mean(R >= 0.95*(1+length(iPeers))),
-                    pRankBot5pct = mean(R <= 0.05*(1+length(iPeers))),
-                    lambdaDiffPeerMean = mean(postDraws[,iID]) - 
-                      mean(postDraws[,iPeers]))
-  res[,c("force0","force1","force2","force3")] <- table(factor(d$y)[d$idOff==iID])
-  return(res)
+    p(sprintf("Processing officer %d", iID))
+    iPeers <- (1:nOff)[schurComp[iID,] < 0.3] |> setdiff(iID)
+    R <- apply(postDraws[, c(iID,iPeers)], 1, rank1)
+    
+    res <- data.frame(idOff=iID,
+                      nOff = length(iPeers),
+                      nInc = sum(d$idOff==iID),
+                      pRankTop5pct = mean(R >= 0.95*(1+length(iPeers))),
+                      pRankBot5pct = mean(R <= 0.05*(1+length(iPeers))),
+                      lambdaDiffPeerMean = mean(postDraws[,iID]) - 
+                        mean(postDraws[,iPeers]))
+    res[,c("force0","force1","force2","force3")] <- table(factor(d$y)[d$idOff==iID])
+    return(res)
   }
 })
-save(resultsSchur, file="resultsSPD.RData")
+save(resultsSchur, file="output/resultsSPD.RData")
 
-# select those who seem interesting
+
+## Table 5 --------------------------------------------------------------------
 resultsSchur |>
   select(idOff,nOff,nInc,force0,force1,force2,force3,
          pRankTop5pct) |>
@@ -695,6 +688,7 @@ resultsSchur |>
   xtable(digits = c(0,0,0,0,0,0,0,0,2)) |>
   print(include.rownames=FALSE)
 
+# low-end outliers, not shown in article
 resultsSchur |>
   select(idOff,nOff,nInc,force0,force1,force2,force3,
          pRankBot5pct) |>
@@ -704,7 +698,8 @@ resultsSchur |>
   print(include.rownames=FALSE)
 
 
-
+# beeswarm plot, not shown in main article
+#   shown as comparison to placebo tests in Figure F1
 df <- resultsSchur |>
   mutate(x      = lambdaDiffPeerMean,
          group  = case_when(pRankTop5pct  > 0.8 ~ "Top 5%",
@@ -729,40 +724,31 @@ ggplot(df, aes(x = "", y = x, colour = group)) +
   coord_flip() 
 
 
-
-
-# show info for selected officer
+## Figure 6 -------------------------------------------------------------------
 iID <- 1006
 schurComp <- diag(Sigma) - Sigma[,iID]^2/Sigma[iID,iID]
 # log scale
 par(mai=0.02+c(0.8,0.4,0.4,0.4))
-hist(log(schurComp), axes=FALSE, ylab="", main="", 
-     xlab=bquote("Var(" ~ lambda[-735] ~ "|" ~ lambda[735] ~ ")"),
-     xlim=log(c(0.05,1.5)),
-     breaks = 30)
-xtick <- c(0.05, 0.1, 0.3, 0.6, 1, 1.5)
-axis(1, at=log(xtick), labels = xtick)
-
 hist(schurComp, axes=FALSE, ylab="", main="", 
      xlab=bquote("Var(" ~ lambda[-1006] ~ "|" ~ lambda[1006] ~ ")"),
      breaks = 30)
 axis(1)
 
-sum(schurComp>0.6)
 sum(schurComp<0.3)
-sum(schurComp>=1 & schurComp<=10)
 
-# get all actions of all officers who have been at a UoF incident
-#   with Officer iID
-a <- d |> 
-  filter(id %in% d$id[d$idOff==iID])
-# get all officers involved in those incidents
-#   including incidents not involving Officer iID
+
+# get all 1006 connected officers including incidents not involving 1006
 a <- d |>
-  filter(idOff %in% a$idOff)
+  right_join(d |> # all officers at UoF incidents with Officer 1006
+               filter(id %in% d$id[d$idOff==iID]) |>
+               select(idOff) |>
+               distinct())
+
 n_distinct(a$id)
 n_distinct(a$idOff)
 nrow(a)
+
+# get edge counts
 b <- split(a$idOff, a$id) |>
   lapply(function(x) expand.grid(x,x)) |>
   bind_rows() |>
@@ -773,15 +759,13 @@ net <- graph_from_data_frame(b, directed=FALSE)
 col <- rep("white", length(unique(a$idOff)))
 col[which(names(V(net))==iID)] <- "lightblue"
 
-# highlight those with 
+# highlight nodes with high conditional variance
 i <- V(net) |> names() |> as.numeric()
 i <- i[schurComp[i] > 0.6]
 border.col <- rep("black", length(unique(a$idOff)))
 border.col[which(names(V(net))==i)] <- "red"
 
-# interactive
-# tkplot(net, edge.width=b$n, vertex.col=col)
-# tk_coords(1)
+## Figure 5 -------------------------------------------------------------------
 par(mai=c(0,0,0,0))
 plot(net,
      edge.width=b$n,
@@ -790,20 +774,18 @@ plot(net,
 # get number of edges
 igraph::E(net)
 
-schurComp[536]
-schurComp[1018]
-schurComp[1033]
-schurComp[993]
+# interactive version (not used in article)
+# tkplot(net, edge.width=b$n, vertex.col=col)
+# tk_coords(1)
 
-schurComp[232]
-schurComp[435]
+# conditional variances discussed in Section 5
+schurComp[c(536, 993, 1018, 1033, 232, 435)] |> round(2)
 
-
-# show rank distribution
+# Figure 7 --------------------------------------------------------------------
+## create set O_i, with t<0.3
 iPeers <- which(schurComp < 0.3)
 R <- apply(postDraws[,iPeers], 1, rank)
 Rpostint <- apply(R, 1, quantile, prob=c(0.025,0.5,0.975))
-#Rpostint <- apply(R, 1, quantile, prob=c(0.2,0.5,1))
 j <- order(Rpostint[2,])
 iZoom <- tail(1:length(iPeers), 60)
 par(mai=0.02+c(0.8,0.8,0.4,0.4))
@@ -814,7 +796,6 @@ plot((1:ncol(Rpostint))[iZoom], Rpostint[2,j][iZoom], pch=16,
      ylim=c(0,700))
 x <- (1:length(j))[iZoom][iPeers[j][iZoom]==iID]
 rect(x-0.5,par()$usr[3],x+0.5,par()$usr[4], col="gray", border=NA)
-#ylim=c(0,max(Rpostint[3,])))
 
 box()
 axis(2)
@@ -828,20 +809,32 @@ for(k in (1:ncol(Rpostint))[iZoom])
 }
 abline(h = length(iPeers)*0.95, col="gray")
 
-# in how many cases did Officer iID have the highest rank?
+# in how many cases did Officer 1006 have the highest rank?
+# "Officer 1006 was the officer who used the most serious form of force in 8 of the 9 incidents for which they were on the scene."
 a <- d$id[d$idOff==iID]
 d |> filter(id %in% a) |>
   group_by(id) |>
   summarize(y[idOff==iID]==max(y))
 
-d |> filter(y==4) |> count(idOff) |>
+# "In seven of those force incidents, Officer 1006 was the only officer to use force."
+d |> filter(id %in% a) |>
+  group_by(id) |>
+  summarize(all(y[idOff!=iID]==1))
+
+# which officers used a lot of force but are not flagged as outliers
+#   demonstrates that traditional threshold based methods come to a different 
+#   result. They ignore context
+
+# "For example, Officer 811, who had 15 Level 2 and three Level 3 uses of force, does not appear in Table 5. Instead, the posterior probability that Officer 811 escalates less than Officer 1006, who has never exceeded Level 1 force, is 97%."
+d |> 
+  filter(y==4) |> 
+  count(idOff) |>
   arrange(desc(n)) |>
   head(10) |>
   left_join(resultsSchur, by=join_by(idOff))
 
-# officer who has many Level 2 + Level 3 UoFs
-d |> filter(id %in% d$id[d$idOff==811])
 mean(postDraws[,811] < postDraws[,1006])
+
 
 # make full SPD graph
 b <- split(d$idOff, d$id) |>
@@ -852,11 +845,11 @@ b <- split(d$idOff, d$id) |>
   data.frame()
 net <- graph_from_data_frame(b, directed=FALSE)
 
-# how many disconnected components
+# "All but two of the 1,503 officers are members of a connected network"
 net |> components() |> purrr::pluck("csize")
 i <- net |> components() |> purrr::pluck("membership")
 net <- net |> delete_vertices(which(i==2))
-# distances between officers
+# "...with an average distance of 2.1 and a maximum distance of 5 separating officers,"
 net |> distances() |> table() 
 net |> distances() |> mean() 
 
