@@ -1,0 +1,887 @@
+library(dplyr)
+library(igraph)
+library(xtable)
+library(doParallel)
+library(posterior)
+library(future)
+library(doFuture)
+library(progressr)
+library(ggplot2)
+library(ggbeeswarm)
+
+setwd("G:/My Drive/docs/Greg/articles/seattle uof/mcmc/")
+
+
+# 3 officers ------------------------------------------------------------------
+load("mcmcSampOff3.RData")
+nOff <- 3
+
+tab <- data.frame(parm=c(paste0("\\lambda_1-\\lambda_{",2:3,"}"),
+                         paste0("\\mathrm{rank}(\\lambda_",1:3,")"),
+                         "s_2","s_3"),
+                  true=c(lambda[1]-lambda[-1],
+                         rank(lambda),
+                         s[3:4]),
+                  postmean=NA,
+                  l95=NA,
+                  u95=NA,
+                  postmeanSmall=NA,
+                  l95small=NA,
+                  u95small=NA)
+
+
+# draw graph
+net0 <- lapply(split(d$idOff, d$id),
+               function(x)
+               {
+                 b <- expand.grid(id1=x,id2=x) |>
+                   filter(id1<id2)
+               })
+net0 <- bind_rows(net0) |>
+  group_by(id1,id2) |>
+  count()
+net <- graph_from_data_frame(net0, directed=FALSE)
+nodeColor <- colorRamp(heat.colors(10))
+col <- nodeColor((rank(lambda)-1)/2)
+col <- apply(col, 1, function(x) rgb(x[1],x[2],x[3], maxColorValue = 255))
+par(mai=0.02+c(0.2,0.2,0.2,0.2))
+plot(net,
+     layout = layout.reingold.tilford,
+     edge.width=net0$n/10,
+     #vertex.color=col,
+     vertex.color="white",
+     vertex.label.cex=1.5,
+     vertex.label=paste(1:nOff,lambda,sep="\n"),
+     vertex.size=30,
+     asp=0.3)
+
+# number of incidents
+n_distinct(d$id)
+
+
+postDraws <- list(lambda = res$draws[,1:nOff],
+                  sDelta = exp(res$draws[,nOff + 1:2]))
+postDraws$s <- 1 + apply(postDraws$sDelta, 1, cumsum) |> t()
+colnames(postDraws$s) <- c("s2","s3")
+
+plot(postDraws$s[,1])
+plot(postDraws$s[,2])
+
+# build Table 1, left panel
+a <- apply(postDraws$s, 2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^s_", tab$parm)
+tab[i,c("postmean","l95","u95")] <- a
+
+a <- apply(postDraws$lambda[,1]-postDraws$lambda[,2:3], 2, 
+           function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^\\\\lambda_", tab$parm)
+tab[i,c("postmean","l95","u95")] <- a
+
+a <- apply(postDraws$lambda, 1, rank) |>
+  apply(1, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(1) |> t()
+i <- grep("^\\\\mathrm\\{rank\\}", tab$parm)
+tab[i,c("postmean","l95","u95")] <- a
+
+
+Sigma <- cov(postDraws$lambda)
+schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> t() |> zapsmall()
+range(schurComp[schurComp>0])
+
+pairs(postDraws$lambda, 
+      labels=c(expression(lambda[1]),expression(lambda[2]),expression(lambda[3])),
+      pch=".")
+
+plot(postDraws$s, xlab=expression(s[2]), ylab=expression(s[3]), 
+     pch=".", log="xy")
+
+
+
+# 3 officers, 10 incidents/officer --------------------------------------------
+load("mcmcSampOff3small.RData")
+nOff <- 3
+
+n_distinct(d0$id)
+
+
+postDraws <- list(lambda = res$draws[,1:nOff],
+                  sDelta = exp(res$draws[,nOff + 1:2]))
+postDraws$s <- 1 + apply(postDraws$sDelta, 1, cumsum) |> t()
+colnames(postDraws$s) <- c("s2","s3")
+
+plot(postDraws$s[,1])
+plot(postDraws$s[,2])
+
+# build Table 1, right panel
+a <- apply(postDraws$s, 2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^s_", tab$parm)
+tab[i,c("postmeanSmall","l95small","u95small")] <- a
+
+a <- apply(postDraws$lambda[,1]-postDraws$lambda[,2:3], 2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^\\\\lambda_", tab$parm)
+tab[i,c("postmeanSmall","l95small","u95small")] <- a
+
+a <- apply(postDraws$lambda, 1, rank) |>
+  apply(1, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(1) |> t()
+i <- grep("^\\\\mathrm\\{rank\\}", tab$parm)
+tab[i,c("postmeanSmall","l95small","u95small")] <- a
+
+
+
+Sigma <- cov(postDraws$lambda)
+schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> t() |> zapsmall()
+range(schurComp[schurComp>0])
+
+
+# Appendix E, Figure E1
+pdf("pairs3off1.pdf", width=7, height=5)
+pairs(postDraws$lambda, 
+      labels=c(expression(lambda[1]),expression(lambda[2]),expression(lambda[3])),
+      pch=".")
+dev.off()
+
+# Appendix E, Figure E2
+pdf("s2s3.pdf", width=7, height=5)
+plot(postDraws$s, xlab=expression(s[2]), ylab=expression(s[3]), 
+     pch=".", log="xy")
+dev.off()
+
+# Appendix E, Figure E3
+pdf("sDiffs.pdf", width=7, height=5)
+plot(postDraws$s[,1]-1, (postDraws$s[,2]-postDraws$s[,1]), 
+     xlab=expression(s[2]-s[1]), ylab=expression(s[3]-s[2]), 
+     pch=".", log="xy")
+dev.off()
+
+# build Table 1 for LaTeX
+tab |>
+  mutate(interval = paste0("(",trimws(format(l95,nsmall=2)),", ",
+                               trimws(format(u95,nsmall=2)),")"),
+         intervalSmall = paste0("(",trimws(format(l95small,nsmall=2)),", ",
+                                    trimws(format(u95small,nsmall=2)),")"),
+         parm = paste0("$",parm,"$")) |>
+  relocate(interval, .before=4) |>
+  relocate(intervalSmall, .before=8) |>
+  select(-l95, -u95, -l95small, -u95small) |>
+  xtable() |>
+  print(sanitize.text.function = identity,
+        include.rownames = FALSE)
+
+
+
+
+
+
+# 3+3 officers ----------------------------------------------------------------
+load("mcmcSampOff6.RData")
+nOff <- n_distinct(d$idOff)
+d$idOff <- d$idOff + 1 # back to R indexing
+
+tab <- data.frame(parm=c(paste0("\\lambda_1-\\lambda_{",2:6,"}"),
+                         paste0("\\lambda_4-\\lambda_{",5:6,"}"),
+                         "s_2","s_3"),
+                  true=c(lambda[1]-lambda[-1],
+                         lambda[4]-lambda[5:6],
+                         s[3:4]),
+                  postmean=NA,
+                  l95=NA,
+                  u95=NA,
+                  postmeanSmall=NA,
+                  l95small=NA,
+                  u95small=NA)
+
+tabRanks <- data.frame(parm=c(paste0("\\mathrm{rank}(\\lambda_",1:3,"|\\mathcal{O}_",1:3,")"),
+                              paste0("\\mathrm{rank}(\\lambda_",4:6,"|\\mathcal{O}_",4:6,")")),
+                  true=c(rank(lambda[1:3]),
+                         rank(lambda[4:6])),
+                  postmean=NA,
+                  l95=NA,
+                  u95=NA,
+                  postmeanSmall=NA,
+                  l95small=NA,
+                  u95small=NA)
+
+# draw graph
+net0 <- lapply(split(d$idOff, d$id),
+               function(x)
+               {
+                 b <- expand.grid(id1=x,id2=x) |>
+                   filter(id1<id2)
+               })
+net0 <- bind_rows(net0) |>
+  group_by(id1,id2) |>
+  count()
+net <- graph_from_data_frame(net0, directed=FALSE)
+i <- match(names(V(net)), 1:nOff)
+nodeColor <- colorRamp(heat.colors(10))
+col <- nodeColor((rank(lambda[i])-1)/(nOff-1))
+col <- apply(col, 1, function(x) rgb(x[1],x[2],x[3], maxColorValue = 255))
+par(mai=0.02+c(0.2,0.2,0.2,0.2))
+plot(net,
+     layout = layout.reingold.tilford,
+     edge.width=net0$n/10,
+     #vertex.color=col,
+     vertex.color="white",
+     vertex.label.cex=1.5,
+     vertex.label=paste(i,lambda[i],sep="\n"),
+     vertex.size=30,
+     asp=0.3)
+
+# number of incidents
+n_distinct(d$id)
+
+postDraws <- list(lambda = res$draws[,1:nOff],
+                  sDelta = exp(res$draws[,nOff + 1:2]))
+postDraws$s <- 1 + apply(postDraws$sDelta, 1, cumsum) |> t()
+colnames(postDraws$s) <- c("s2","s3")
+
+plot(postDraws$s[,1])
+plot(postDraws$s[,2])
+
+# Table 2, left panel
+a <- apply(postDraws$s, 2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975))))  |>
+  round(2) |> t()
+i <- grep("^s_", tab$parm)
+tab[i,c("postmean","l95","u95")] <- a
+
+a <- apply(postDraws$lambda[,1]-postDraws$lambda[,2:6], 2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^\\\\lambda_1", tab$parm)
+tab[i,c("postmean","l95","u95")] <- a
+
+a <- apply(postDraws$lambda[,4]-postDraws$lambda[,5:6], 2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^\\\\lambda_4", tab$parm)
+tab[i,c("postmean","l95","u95")] <- a
+
+
+a <- apply(postDraws$lambda[,1:3], 1, rank) |>
+  apply(1, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(1) |> t()
+i <- grep("lambda_[123]", tabRanks$parm)
+tabRanks[i,c("postmean","l95","u95")] <- a
+a <- apply(postDraws$lambda[,4:6], 1, rank) |>
+  apply(1, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(1) |> t()
+i <- grep("lambda_[456]", tabRanks$parm)
+tabRanks[i,c("postmean","l95","u95")] <- a
+
+
+Sigma <- cov(postDraws$lambda)
+schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> t() |> zapsmall()
+schurComp[1,] |> round(2)
+
+# show pairs plot
+postDraws$lambda |> 
+  data.frame() |> 
+  pairs(labels=c(expression(lambda[1]), expression(lambda[2]),
+                 expression(lambda[3]), expression(lambda[4]),
+                 expression(lambda[5]), expression(lambda[6])),
+        pch=".")
+
+
+# 3+3 officers, 10 incidents/officer ------------------------------------------
+load("mcmcSampOff6small.RData")
+nOff <- n_distinct(d$idOff)
+d0$idOff <- d0$idOff + 1 # back to R indexing
+
+postDraws <- list(lambda = res$draws[,1:nOff],
+                  sDelta = exp(res$draws[,nOff + 1:2]))
+postDraws$s <- 1 + apply(postDraws$sDelta, 1, cumsum) |> t()
+colnames(postDraws$s) <- c("s2","s3")
+
+# Table 2, right panel
+a <- apply(postDraws$s, 2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^s_", tab$parm)
+tab[i,c("postmeanSmall","l95small","u95small")] <- a
+
+a <- apply(postDraws$lambda[,1]-postDraws$lambda[,2:6], 2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^\\\\lambda_1", tab$parm)
+tab[i,c("postmeanSmall","l95small","u95small")] <- a
+
+a <- apply(postDraws$lambda[,4]-postDraws$lambda[,5:6], 2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^\\\\lambda_4", tab$parm)
+tab[i,c("postmeanSmall","l95small","u95small")] <- a
+
+
+
+a <- apply(postDraws$lambda[,1:3], 1, rank) |>
+  apply(1, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(1) |> t()
+i <- grep("lambda_[123]", tabRanks$parm)
+tabRanks[i,c("postmeanSmall","l95small","u95small")] <- a
+a <- apply(postDraws$lambda[,4:6], 1, rank) |>
+  apply(1, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(1) |> t()
+i <- grep("lambda_[456]", tabRanks$parm)
+tabRanks[i,c("postmeanSmall","l95small","u95small")] <- a
+
+
+Sigma <- cov(postDraws$lambda)
+schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> t() |> zapsmall()
+schurComp[1,] |> round(2)
+
+# Table 2 in LaTeX
+tab |>
+  mutate(interval = paste0("(",trimws(format(l95,nsmall=2)),", ",
+                           trimws(format(u95,nsmall=2)),")"),
+         intervalSmall = paste0("(",trimws(format(l95small,nsmall=2)),", ",
+                                trimws(format(u95small,nsmall=2)),")"),
+         parm = paste0("$",parm,"$")) |>
+  relocate(interval, .before=4) |>
+  relocate(intervalSmall, .before=8) |>
+  select(-l95, -u95, -l95small, -u95small) |>
+  xtable() |>
+  print(sanitize.text.function = identity,
+        include.rownames = FALSE)
+
+
+# Table 3 in LaTeX
+tabRanks |>
+  mutate(interval = paste0("(",trimws(format(l95,nsmall=1)),", ",
+                           trimws(format(u95,nsmall=1)),")"),
+         intervalSmall = paste0("(",trimws(format(l95small,nsmall=1)),", ",
+                                trimws(format(u95small,nsmall=1)),")"),
+         parm = paste0("$",parm,"$")) |>
+  relocate(interval, .before=4) |>
+  relocate(intervalSmall, .before=8) |>
+  select(-l95, -u95, -l95small, -u95small) |>
+  xtable() |>
+  print(sanitize.text.function = identity,
+        include.rownames = FALSE)
+
+
+
+# 10 officers in a chained network --------------------------------------------
+load("mcmcSampOff10.RData")
+nOff <- n_distinct(d$idOff)
+d$idOff <- d$idOff + 1 # back to R indexing
+
+tab <- data.frame(parm=c(paste0("\\lambda_1-\\lambda_{",2:10,"}"),
+                         paste0("\\lambda_5-\\lambda_{",(1:10)[-5],"}"),
+                         "s_2","s_3"),
+                  true=c(lambda[1]-lambda[-1],
+                         lambda[5]-lambda[-5],
+                         s[3:4]),
+                  postmean=NA,
+                  l95=NA,
+                  u95=NA,
+                  postSD=NA,
+                  postmeanSmall=NA,
+                  l95small=NA,
+                  u95small=NA,
+                  postSDsmall=NA)
+
+tabRanks <- data.frame(parm=paste0("\\mathrm{rank}(\\lambda_",1:10,")"),
+                       true=rank(lambda),
+                       postmean=NA,
+                       l95=NA,
+                       u95=NA,
+                       postmeanSmall=NA,
+                       l95small=NA,
+                       u95small=NA)
+
+
+# draw graph
+net0 <- lapply(split(d$idOff, d$id),
+               function(x)
+               {
+                 b <- expand.grid(id1=x,id2=x) |>
+                   filter(id1<id2)
+               })
+net0 <- bind_rows(net0) |>
+  group_by(id1,id2) |>
+  count()
+net <- graph_from_data_frame(net0, directed=FALSE)
+i <- match(names(V(net)), 1:nOff)
+nodeColor <- colorRamp(heat.colors(10))
+col <- nodeColor((rank(lambda[i])-1)/(nOff-1))
+col <- apply(col, 1, function(x) rgb(x[1],x[2],x[3], maxColorValue = 255))
+par(mai=0.02+c(0.2,0.2,0.2,0.2))
+plot(net,
+     layout = layout.reingold.tilford,
+     edge.width=net0$n/10,
+     #vertex.color=col,
+     vertex.color="white",
+     vertex.label.cex=1.5,
+     vertex.label=paste(i,lambda[i],sep="\n"),
+     vertex.size=20,
+     asp=0.45)
+
+# number of incidents
+n_distinct(d$id)
+postDraws <- list(lambda = res$draws[,1:nOff],
+                  sDelta = exp(res$draws[,nOff + 1:2]))
+postDraws$s <- 1 + apply(postDraws$sDelta, 1, cumsum) |> t()
+colnames(postDraws$s) <- c("s2","s3")
+
+plot(postDraws$s[,1])
+plot(postDraws$s[,2])
+
+# Table 4, left panel
+a <- apply(postDraws$s, 2, 
+           function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("s_", tab$parm)
+tab[i,c("postmean","l95","u95")] <- a
+
+a <- apply(postDraws$lambda[,1]-postDraws$lambda[,-1], 2, 
+           function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^\\\\lambda_1", tab$parm)
+tab[i,c("postmean","l95","u95")] <- a
+
+a <- apply(postDraws$lambda[,5]-postDraws$lambda[,-5], 2, 
+           function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^\\\\lambda_5", tab$parm)
+tab[i,c("postmean","l95","u95")] <- a
+
+
+
+a <- apply(postDraws$lambda, 1, rank) |>
+  apply(1, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(1) |> t()
+i <- grep("lambda_", tabRanks$parm)
+tabRanks[i,c("postmean","l95","u95")] <- a
+
+
+# increasing uncertainty with distance
+a <- apply(postDraws$lambda[,1]-postDraws$lambda[,-1], 2, sd)
+i <- grep("^\\\\lambda_1", tab$parm)
+tab[i,c("postSD")] <- a
+
+a <- apply(postDraws$lambda[,5]-postDraws$lambda[,-5], 2, sd)
+i <- grep("^\\\\lambda_5", tab$parm)
+tab[i,c("postSD")] <- a
+
+a <- apply(postDraws$s, 2, sd)
+i <- grep("^s_", tab$parm)
+tab[i,c("postSD")] <- a
+
+
+Sigma <- cov(postDraws$lambda)
+schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> 
+  t() |> zapsmall()
+schurComp[1,] |> round(2)
+
+
+i <- 1
+a <- schurComp[1,]
+par(mai=0.02+c(0.8,0.8,0.4,0.4))
+plot((1:10), a,
+     pch=16,
+     ylim=c(0,0.4),
+     xlab="Peer Officer ID",
+     ylab=bquote("Var(" ~ lambda[-1] ~ "|" ~ lambda[1] ~ ")")) 
+
+
+
+# 10 officers in a chained network, 19 incidents/officer ----------------------
+load("mcmcSampOff10small.RData")
+nOff <- n_distinct(d0$idOff)
+d0$idOff <- d0$idOff + 1 # back to R indexing
+
+# number of incidents
+n_distinct(d0$id)
+postDraws <- list(lambda = res$draws[,1:nOff],
+                  sDelta = exp(res$draws[,nOff + 1:2]))
+postDraws$s <- 1 + apply(postDraws$sDelta, 1, cumsum) |> t()
+colnames(postDraws$s) <- c("s2","s3")
+
+plot(postDraws$s[,1])
+plot(postDraws$s[,2])
+
+
+# Table 4, right panel
+a <- apply(postDraws$s, 2, 
+           function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("s_", tab$parm)
+tab[i,c("postmeanSmall","l95small","u95small")] <- a
+
+a <- apply(postDraws$lambda[,1]-postDraws$lambda[,-1], 2, 
+           function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^\\\\lambda_1", tab$parm)
+tab[i,c("postmeanSmall","l95small","u95small")] <- a
+plot(lambda[1]-lambda[-1], a[,1])
+
+a <- apply(postDraws$lambda[,5]-postDraws$lambda[,-5], 2, 
+           function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+i <- grep("^\\\\lambda_5", tab$parm)
+tab[i,c("postmeanSmall","l95small","u95small")] <- a
+
+
+a <- apply(postDraws$lambda, 1, rank) |>
+  apply(1, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(1) |> t()
+i <- grep("lambda_", tabRanks$parm)
+tabRanks[i,c("postmeanSmall","l95small","u95small")] <- a
+
+
+
+# increasing uncertainty with distance
+a <- apply(postDraws$lambda[,1]-postDraws$lambda[,-1], 2, sd)
+i <- grep("^\\\\lambda_1", tab$parm)
+tab[i,c("postSDsmall")] <- a
+
+a <- apply(postDraws$lambda[,5]-postDraws$lambda[,-5], 2, sd)
+i <- grep("^\\\\lambda_5", tab$parm)
+tab[i,c("postSDsmall")] <- a
+
+a <- apply(postDraws$s, 2, sd)
+i <- grep("^s_", tab$parm)
+tab[i,c("postSDsmall")] <- a
+
+Sigma <- cov(postDraws$lambda)
+schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> 
+  t() |> zapsmall()
+schurComp[1,] |> round(2)
+schurComp[5,] |> round(2)
+
+# increasing uncertainty with distance
+apply(postDraws$lambda[,1]-postDraws$lambda[,-1], 2, sd)
+
+i <- 1
+a <- schurComp[1,]
+par(mai=0.02+c(0.8,0.8,0.4,0.4))
+plot((1:10), a,
+     pch=16,
+     #ylim=c(0,0.4),
+     xlab="Peer Officer ID",
+     ylab=bquote("Var(" ~ lambda[-1] ~ "|" ~ lambda[1] ~ ")"))
+
+
+# Table 4 in LaTeX
+tab |>
+  mutate(interval = paste0("(",trimws(format(l95,nsmall=2)),", ",
+                               trimws(format(u95,nsmall=2)),")"),
+         intervalSmall = paste0("(",trimws(format(l95small,nsmall=2)),", ",
+                                    trimws(format(u95small,nsmall=2)),")"),
+         parm = paste0("$",parm,"$")) |>
+  relocate(interval, .before=4) |>
+  relocate(intervalSmall, .before=9) |>
+  select(-l95, -u95, -l95small, -u95small) |>
+  xtable() |>
+  print(sanitize.text.function = identity,
+        include.rownames = FALSE)
+
+
+tabRanks |>
+  mutate(interval = paste0("(",trimws(format(l95,nsmall=1)),", ",
+                           trimws(format(u95,nsmall=1)),")"),
+         intervalSmall = paste0("(",trimws(format(l95small,nsmall=1)),", ",
+                                trimws(format(u95small,nsmall=1)),")"),
+         parm = paste0("$",parm,"$")) |>
+  relocate(interval, .before=4) |>
+  relocate(intervalSmall, .before=8) |>
+  select(-l95, -u95, -l95small, -u95small) |>
+  xtable(digits = 1) |>
+  print(sanitize.text.function = identity,
+        include.rownames = FALSE)
+
+
+R <- apply(postDraws$lambda, 1, rank)
+Rpostint <- apply(R, 1, quantile, prob=c(0.025,0.5,0.975))
+
+# Stats computed in Section 4.3
+# is 8 the smallest?
+apply(R, 2, function(x) x[8] <= 2) |>
+  mean()
+
+# is 5 the largest?
+apply(R, 2, function(x) x[5] >= 9) |>
+  mean()
+
+
+# prob that 2, 5 are among the top two
+#  most likely top 2
+apply(R, 2, function(x) {order(x) |> tail(2) |> sort() |> paste(collapse=",")}) |> table() |> sort()
+order(lambda) |> tail(2) |> sort()
+apply(R, 2, function(x) {x[2]>=7 & x[5]>=7}) |>
+  mean()
+
+
+
+# Seattle ---------------------------------------------------------------------
+load("dataSPD.RData")
+
+# Section 5 stats
+# number of officers
+nOff <- n_distinct(d$idOff)
+nOff
+
+# number of incidents
+n_distinct(d$id)
+# number of uses-of-force
+sum(d$y!=1)
+# number of witness officers
+sum(d$y==1)
+
+# dsitribution of force levels
+d |> count(y) |> mutate(pct=n/sum(n))
+
+
+chains <- vector("list", length = 4)
+for(iChain in 1:length(chains))
+{
+  message("Loading chain ", iChain)
+  load(paste0("mcmcSampSPDchain",iChain,".RData"))
+
+  postDraws <- list(lambda = resSPD$draws[,1:nOff],
+                    sDelta = exp(resSPD$draws[,nOff+1:2]))
+  colnames(postDraws$sDelta) <- c("sDiff1.2","sDiff2.3")
+
+    # compute s from sDelta
+  postDraws$s <- 1 + apply(postDraws$sDelta, 1, cumsum) |> t()
+  colnames(postDraws$s) <- c("s2","s3")
+
+  chains[[iChain]] <- cbind(lambda = postDraws$lambda,
+                            s      = postDraws$s,
+                            sDelta = postDraws$sDelta)
+}
+
+burnin <- 200
+chains <- lapply(chains, function(x) x[-(1:burnin),])
+
+rvarDraws <- as_draws_rvars(chains) |>
+  as_draws_array()
+apply(rvarDraws[,,1504:1507], 3, ess_bulk)
+apply(rvarDraws[,,1504:1507], 3, ess_tail)
+apply(rvarDraws[,,1504:1507], 3, posterior::rhat)
+apply(rvarDraws[,,1504:1507], 3, mcse_mean)
+
+postDraws <- as_draws_matrix(rvarDraws)
+
+rvarDraws[,,1504:1507] |> 
+  apply(3, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+
+
+
+# find local outliers based on diag of Schur complement
+# Schur complement
+rank1 <- function(x)
+{
+  1+sum(x[1]>x[-1])
+}
+
+# schurComp = Cov(lambda[j]|lambda[i])
+Sigma <- cov(postDraws[,1:nOff])
+schurComp <- sapply(1:nOff, 
+                    function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> 
+  t() |> zapsmall()
+
+# about 20 minutes
+#   use 4 cores... can be memory intensive
+plan(multisession, workers = 4)
+registerDoFuture()
+handlers("cli")
+
+with_progress({
+  p <- progressor(steps = nOff)
+  
+  resultsSchur <- foreach(iID=1:nOff, .combine=rbind) %dopar%
+  {
+  # schurComp <- diag(Sigma)[-iID] - Sigma[-iID,iID]^2/Sigma[iID,iID]
+  p(sprintf("Processing officer %d", iID))
+  iPeers <- (1:nOff)[schurComp[iID,] < 0.3] |> setdiff(iID)
+  R <- apply(postDraws[, c(iID,iPeers)], 1, rank1)
+  
+  res <- data.frame(idOff=iID,
+                    nOff = length(iPeers),
+                    nInc = sum(d$idOff==iID),
+                    pRankTop5pct = mean(R >= 0.95*(1+length(iPeers))),
+                    pRankBot5pct = mean(R <= 0.05*(1+length(iPeers))),
+                    lambdaDiffPeerMean = mean(postDraws[,iID]) - 
+                      mean(postDraws[,iPeers]))
+  res[,c("force0","force1","force2","force3")] <- table(factor(d$y)[d$idOff==iID])
+  return(res)
+  }
+})
+save(resultsSchur, file="resultsSPD.RData")
+
+# select those who seem interesting
+resultsSchur |>
+  select(idOff,nOff,nInc,force0,force1,force2,force3,
+         pRankTop5pct) |>
+  filter(pRankTop5pct > 0.80) |>
+  arrange(desc(pRankTop5pct)) |>
+  xtable(digits = c(0,0,0,0,0,0,0,0,2)) |>
+  print(include.rownames=FALSE)
+
+resultsSchur |>
+  select(idOff,nOff,nInc,force0,force1,force2,force3,
+         pRankBot5pct) |>
+  filter(nInc>5 & pRankBot5pct > 0.90) |>
+  arrange(desc(pRankBot5pct)) |>
+  xtable(digits = c(0,0,0,0,0,0,0,0,2)) |>
+  print(include.rownames=FALSE)
+
+
+
+df <- resultsSchur |>
+  mutate(x      = lambdaDiffPeerMean,
+         group  = case_when(pRankTop5pct  > 0.8 ~ "Top 5%",
+                            pRankBot5pct  > 0.8 ~ "Bottom 5%",
+                            TRUE                ~ "Middle")) |>
+  select(x,group)
+
+ggplot(df, aes(x = "", y = x, colour = group)) +
+  geom_quasirandom(width = 0.35, size = 1.9, alpha = 0.8) +
+  scale_colour_manual(values = c("Top 5%"   = "#d95f02",
+                                 "Bottom 5%" = "#0173b2",
+                                 "Middle"          = "grey70"),
+                      breaks = c("Top 5%", "Bottom 5%"),
+                      name   = NULL) +
+  scale_y_continuous(expand = expansion(mult = 0, add = 0.15)) +
+  scale_x_discrete(expand = expansion(mult = 0, add = 0.4)) +
+  labs(y = expression(lambda[i] - mean(lambda[peers])),
+       x = NULL) +
+  theme_minimal() +
+  theme(axis.text.y  = element_blank(),
+        axis.ticks.y = element_blank()) +
+  coord_flip() 
+
+
+
+
+# show info for selected officer
+iID <- 1006
+schurComp <- diag(Sigma) - Sigma[,iID]^2/Sigma[iID,iID]
+# log scale
+par(mai=0.02+c(0.8,0.4,0.4,0.4))
+hist(log(schurComp), axes=FALSE, ylab="", main="", 
+     xlab=bquote("Var(" ~ lambda[-735] ~ "|" ~ lambda[735] ~ ")"),
+     xlim=log(c(0.05,1.5)),
+     breaks = 30)
+xtick <- c(0.05, 0.1, 0.3, 0.6, 1, 1.5)
+axis(1, at=log(xtick), labels = xtick)
+
+hist(schurComp, axes=FALSE, ylab="", main="", 
+     xlab=bquote("Var(" ~ lambda[-1006] ~ "|" ~ lambda[1006] ~ ")"),
+     breaks = 30)
+axis(1)
+
+sum(schurComp>0.6)
+sum(schurComp<0.3)
+sum(schurComp>=1 & schurComp<=10)
+
+# get all actions of all officers who have been at a UoF incident
+#   with Officer iID
+a <- d |> 
+  filter(id %in% d$id[d$idOff==iID])
+# get all officers involved in those incidents
+#   including incidents not involving Officer iID
+a <- d |>
+  filter(idOff %in% a$idOff)
+n_distinct(a$id)
+n_distinct(a$idOff)
+nrow(a)
+b <- split(a$idOff, a$id) |>
+  lapply(function(x) expand.grid(x,x)) |>
+  bind_rows() |>
+  filter(Var1 < Var2) |>
+  count(Var1,Var2) |> 
+  data.frame()
+net <- graph_from_data_frame(b, directed=FALSE)
+col <- rep("white", length(unique(a$idOff)))
+col[which(names(V(net))==iID)] <- "lightblue"
+
+# highlight those with 
+i <- V(net) |> names() |> as.numeric()
+i <- i[schurComp[i] > 0.6]
+border.col <- rep("black", length(unique(a$idOff)))
+border.col[which(names(V(net))==i)] <- "red"
+
+# interactive
+# tkplot(net, edge.width=b$n, vertex.col=col)
+# tk_coords(1)
+par(mai=c(0,0,0,0))
+plot(net,
+     edge.width=b$n,
+     vertex.color=col,
+     vertex.frame.color=border.col)
+# get number of edges
+igraph::E(net)
+
+schurComp[536]
+schurComp[1018]
+schurComp[1033]
+schurComp[993]
+
+schurComp[232]
+schurComp[435]
+
+
+# show rank distribution
+iPeers <- which(schurComp < 0.3)
+R <- apply(postDraws[,iPeers], 1, rank)
+Rpostint <- apply(R, 1, quantile, prob=c(0.025,0.5,0.975))
+#Rpostint <- apply(R, 1, quantile, prob=c(0.2,0.5,1))
+j <- order(Rpostint[2,])
+iZoom <- tail(1:length(iPeers), 60)
+par(mai=0.02+c(0.8,0.8,0.4,0.4))
+plot((1:ncol(Rpostint))[iZoom], Rpostint[2,j][iZoom], pch=16,
+     ylab="Rank distribution",
+     xlab="Officer ID",
+     axes=FALSE,
+     ylim=c(0,700))
+x <- (1:length(j))[iZoom][iPeers[j][iZoom]==iID]
+rect(x-0.5,par()$usr[3],x+0.5,par()$usr[4], col="gray", border=NA)
+#ylim=c(0,max(Rpostint[3,])))
+
+box()
+axis(2)
+axis(1,at=(1:length(j))[iZoom], 
+     labels = iPeers[j][iZoom], 
+     las=2, cex.axis=0.5)
+for(k in (1:ncol(Rpostint))[iZoom]) 
+{
+  lines(c(k,k), Rpostint[c(1,3),j[k]], col="red")
+  points(k, Rpostint[2,j[k]], pch=16)
+}
+abline(h = length(iPeers)*0.95, col="gray")
+
+# in how many cases did Officer iID have the highest rank?
+a <- d$id[d$idOff==iID]
+d |> filter(id %in% a) |>
+  group_by(id) |>
+  summarize(y[idOff==iID]==max(y))
+
+d |> filter(y==4) |> count(idOff) |>
+  arrange(desc(n)) |>
+  head(10) |>
+  left_join(resultsSchur, by=join_by(idOff))
+
+# officer who has many Level 2 + Level 3 UoFs
+d |> filter(id %in% d$id[d$idOff==811])
+mean(postDraws[,811] < postDraws[,1006])
+
+# make full SPD graph
+b <- split(d$idOff, d$id) |>
+  lapply(function(x) expand.grid(x,x)) |>
+  bind_rows() |>
+  filter(Var1 < Var2) |>
+  count(Var1,Var2) |> 
+  data.frame()
+net <- graph_from_data_frame(b, directed=FALSE)
+
+# how many disconnected components
+net |> components() |> purrr::pluck("csize")
+i <- net |> components() |> purrr::pluck("membership")
+net <- net |> delete_vertices(which(i==2))
+# distances between officers
+net |> distances() |> table() 
+net |> distances() |> mean() 
+
