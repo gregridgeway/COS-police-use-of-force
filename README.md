@@ -5,7 +5,9 @@ Conditional Ordinal Stereotype Model to Estimate Police Officers' Propensity to 
 
 This repository contains the code and data associated with "A Conditional Ordinal Stereotype Model to Estimate Police Officers' Propensity to Escalate Force." The article introduced a conditional ordinal stereotype model for estimating a police officer's latent propensity to escalate to higher-severity force options during an encounter. Propensity to escalate is the likelihood of selecting a more serious force category than peer officers confronting the same circumstances. The associated conditional likelihood depends solely on data from the times and places where multiple officers use various forms of force.
 
-The `code` folder contains three scripts associated with the three simulated examples in the article.
+Code for the conditional stereotype model is a blend of R and C++. The C++ code ([`code/conditional_stereotype.cpp`](code/conditional_stereotype.cpp)) contains the C++ code that parallelizes the conditional likelihood calculation by incident. For incidents with two officers, there is a simple, direct calculation. For incidents with three to seven officers, there is a no-repeats version of Heap's algorithm O(m!). For incidents with eight or more officers, there is a multi-dimensional discrete Fourier transform O(m^J). This arrangement results in the most efficient conditional likelihood calculation. The R script ([`code/mcmcConditionalStereotype.R`](code/mcmcConditionalStereotype.R)) contains the Metropolis algorithm that samples from the posterior distribution of the conditional stereotype model parameters.
+
+The [`code`](code/) folder contains three scripts associated with the three simulated examples in the article.
 
 - Simulation #1: Demonstrates proof-of-concept in a well-connected three officer network. [`code/mcmcOff3.R`](code/mcmcOff3.R)
 - Simulation #2: Shows the challenge of analyzing disconnected use-of-force networks and that the conditional variance helps to partition the network into peers and non-peers. [`code/mcmcOff3+3.R`](code/mcmcOff3+3.R)
@@ -15,7 +17,6 @@ All three simulations include versions with large and small datasets. The large 
 
 This repository also contains data and code for analyzing seven years of use-of-force data from Seattle PD: [`code/mcmcSPD.R`](code/mcmcSPD.R), [`data/dataSPD.RData`](data/dataSPD.RData)
 
-Code for the conditional stereotype model is a blend of R and C++. The C++ code ([`code/conditional_stereotype.cpp`](code/conditional_stereotype.cpp)) contains the C++ code that parallelizes the conditional likelihood calculation by incident. For incidents with two officers, there is a simple, direct calculation. For incidents with three to seven officers, there is a no-repeats version of Heap's algorithm O(m!). For incidents with eight or more officers, there is a multi-dimensional discrete Fourier transform O(m^J). This arrangement results in the most efficient conditional likelihood calculation. The R script ([`code/mcmcConditionalStereotype.R`](code/mcmcConditionalStereotype.R)) contains the Metropolis algorithm that samples from the posterior distribution of the conditional stereotype model parameters.
 
 
 # Required R packages
