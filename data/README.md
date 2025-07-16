@@ -1,3 +1,6 @@
+DATA - Conditional Ordinal Stereotype Model to Estimate Police Officers' Propensity to Escalate Force
+================
+
 `dataSPD.RData` contains the Seattle PD use-of-force data already formatted for analysis, a single data frame `d`. The data frame contains the following columns:
 
 - `id`: use-of-force incident identifier, sequential integers from 1 to 4,821
