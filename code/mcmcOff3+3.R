@@ -1,16 +1,10 @@
 
 library(dplyr)
 
-# load C++ code for conditional likelihood calcs and acceptance probability
-source("mcmcConditionalStereotype.R")
+RcppParallel::setThreadOptions(numThreads = 8)
+source("code/mcmcConditionalStereotype.R")
 
-
-################################################################################
-# simulate with two unconnected groups 3+3 officers
-################################################################################
-# Seattle example nInc = 4821, nOff = 1503, 
-# 0-28807, 1-6243, 2-1885, 3-81
-
+# 3+3 disconnected, 124 incidents per officers --------------------------------
 set.seed(20010618)
 nIncidents <- 500
 nOff <- sample(2:3, nIncidents, replace = TRUE)
@@ -73,19 +67,8 @@ thetaInit[(nTotOfficers+1):(nTotOfficers+2)] <-
 save(res, thetaInit, d, lambda, s, file="mcmcSampOff6.RData", compress=TRUE)
 
 
-plot(res$draws[,nTotOfficers+1])
-plot(res$draws[,nTotOfficers+2])
-plot(res$draws[,1])
 
-c(1 + mean(exp(res$draws[,nTotOfficers+1])),
-  1 + mean(exp(res$draws[,nTotOfficers+1])) +
-    mean(exp(res$draws[,nTotOfficers+2])))
-
-
-################################################################################
-# simulate with two unconnected groups 3+3 officers
-#   with 10 incidents per officer
-################################################################################
+# 3+3 disconnected, 10 incidents per officers --------------------------------
 
 set.seed(20010618)
 # use 30 with 1,2,3 and 30 with 4,5,6
@@ -117,11 +100,3 @@ thetaInit[(nTotOfficers+1):(nTotOfficers+2)] <-
 
 save(res, thetaInit, d0, lambda, s, file="mcmcSampOff6small.RData", compress=TRUE)
 
-
-plot(res$draws[,nTotOfficers+1])
-plot(res$draws[,nTotOfficers+2])
-plot(res$draws[,1])
-
-c(1 + mean(exp(res$draws[,nTotOfficers+1])),
-  1 + mean(exp(res$draws[,nTotOfficers+1])) +
-    mean(exp(res$draws[,nTotOfficers+2])))

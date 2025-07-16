@@ -1,14 +1,12 @@
 
 library(dplyr)
 
-# load C++ code for conditional likelihood calcs and acceptance probability
-source("mcmcConditionalStereotype.R")
+RcppParallel::setThreadOptions(numThreads = 8)
+source("code/mcmcConditionalStereotype.R")
 
 
-################################################################################
-# test code with 3 simulated officers
-#    test 1: ~100 incidents per officer
-################################################################################
+# 3 officers, ~100 incidents per officer --------------------------------------
+
 set.seed(20010618)
 nIncidents <- 500
 # number of officers per incident
@@ -21,7 +19,7 @@ lambda <- -c(0.5, 1, 2)
 s <- c(0, 1, 1.5, 2)
 
 
-# draw Figure 2 histogram
+## Figure 2 -------------------------------------------------------------------
 p <- t(exp(c(-0.15, -0.75, -1.50, -3.00) + s %*% t(lambda)))
 barplot(p, beside=TRUE, 
         names.arg=c("Witness", "Level 1", "Level 2", "Level 3"),
@@ -86,21 +84,8 @@ thetaInit[(nTotOfficers+1):(nTotOfficers+2)] <-
 save(res, thetaInit, d, lambda, s, file="mcmcSampOff3.RData", compress=TRUE)
 
 
-plot(res$draws[,nTotOfficers+1], ylab=expression(s[2]))
-plot(res$draws[,nTotOfficers+2], ylab=expression(s[3]))
-plot(res$draws[,1])
 
-c(1 + mean(exp(res$draws[,nTotOfficers+1])),
-  1 + mean(exp(res$draws[,nTotOfficers+1])) +
-    mean(exp(res$draws[,nTotOfficers+2])))
-
-
-
-
-################################################################################
-# test code with 3 simulated officers
-#    test 2: 10 per officer
-################################################################################
+# 3 officers, 10 incidents per officer --------------------------------------
 set.seed(20010618)
 d0 <- d |> filter(id <= 30)
 
@@ -123,11 +108,3 @@ thetaInit[(nTotOfficers+1):(nTotOfficers+2)] <-
   exp(thetaInit[(nTotOfficers+1):(nTotOfficers+2)])
 
 save(res, thetaInit, d0, lambda, s, file="mcmcSampOff3small.RData", compress=TRUE)
-
-plot(res$draws[,nTotOfficers+1])
-plot(res$draws[,nTotOfficers+2])
-plot(res$draws[,1])
-
-c(1 + mean(exp(res$draws[,nTotOfficers+1])),
-  1 + mean(exp(res$draws[,nTotOfficers+1])) +
-    mean(exp(res$draws[,nTotOfficers+2])))

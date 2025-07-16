@@ -1,11 +1,11 @@
-################################################################################
-# simulate 10 officers in an arc
-################################################################################
+
+# 10 officers in a chain, 144 incidents per officer ---------------------------
 
 library(dplyr)
 
-# load C++ code for conditional likelihood calcs and acceptance probability
-source("mcmcConditionalStereotype.R")
+RcppParallel::setThreadOptions(numThreads = 8)
+source("code/mcmcConditionalStereotype.R")
+
 
 set.seed(20010618)
 nIncidents <- 2000
@@ -73,19 +73,9 @@ thetaInit[(nTotOfficers+1):(nTotOfficers+2)] <-
 save(res, thetaInit, d, lambda, s, file="mcmcSampOff10.RData", compress=TRUE)
 
 
-plot(res$draws[,nTotOfficers+1])
-plot(res$draws[,nTotOfficers+2])
-plot(res$draws[,1])
 
-c(1 + mean(exp(res$draws[,nTotOfficers+1])),
-  1 + mean(exp(res$draws[,nTotOfficers+1])) +
-    mean(exp(res$draws[,nTotOfficers+2])))
+# 10 officers in a chain, 19 incidents per officer ---------------------------
 
-
-################################################################################
-# simulate 10 officers in an arc
-#   with 19 incidents per officer
-################################################################################
 set.seed(20010618)
 
 d0 <- d |> filter(id<=190)
@@ -110,11 +100,3 @@ thetaInit[(nTotOfficers+1):(nTotOfficers+2)] <-
 
 save(res, thetaInit, d0, lambda, s, file="mcmcSampOff10small.RData", compress=TRUE)
 
-
-plot(res$draws[,nTotOfficers+1])
-plot(res$draws[,nTotOfficers+2])
-plot(res$draws[,1])
-
-c(1 + mean(exp(res$draws[,nTotOfficers+1])),
-  1 + mean(exp(res$draws[,nTotOfficers+1])) +
-    mean(exp(res$draws[,nTotOfficers+2])))

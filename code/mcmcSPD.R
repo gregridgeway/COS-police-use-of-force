@@ -1,13 +1,8 @@
-
-#-----------------------------------------------------------------------------
-# Main analysis of SPD use of force data
-#-----------------------------------------------------------------------------
+# Main analysis of SPD use-of-force data --------------------------------------
 
 library(dplyr)
 
 RcppParallel::setThreadOptions(numThreads = 8)
-
-# load C++ code for conditional likelihood calcs and acceptance probability
 source("code/mcmcConditionalStereotype.R")
 
 # load SPD data
