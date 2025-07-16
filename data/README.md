@@ -1,9 +1,9 @@
-Please replace the contents of this file with relevant instructions for your repository or remove this file entirely.
+`dataSPD.RData` contains the Seattle PD use-of-force data already formatted for analysis, a single data frame `d`. The data frame contains the following columns:
 
-This directory would generally contain the real data files (or facsimile versions of them in place of confidential data) and simulated data files.
+- `id`: use-of-force incident identifier, sequential integers from 1 to 4,821
 
-Cleaned data that are produced by processing raw input data might also be placed here.
+- `idOff`: officer identifier, integers from 1 to 1,503. `idOff` is a scrambled identifier and does not link to any Seattle PD officer information
 
-Code to generate the simulated data and (if relevant) and facsimile data provided in place of confidential real data might also be placed here. 
+- `y`: ordinal use-of-force level, the most servious level of force that the officer used at this incident. `y` contains integers from 1 to 4, where 1 is the lowest severity and 4 is the highest severity
 
-Code for data cleaning could potentially also be placed here rather than in `code`.
+Incidents with no variation in `y` (e.g. single officer incidents, incidents where no officer uses force) have been removed from the data since they have no information for the parameters of interest through the conditional likelihood.
