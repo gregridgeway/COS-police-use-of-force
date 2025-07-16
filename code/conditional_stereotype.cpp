@@ -489,7 +489,7 @@ struct LogCLWorker : public Worker {
 
 
 // [[Rcpp::export]]
-// compute logCL for each incident in parallel
+// compute logCL, parallel computation over incidents
 double logCLfull(NumericVector nvLambdaAll,
                  NumericVector nvS,
                  IntegerVector ivIDOff,
