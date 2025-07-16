@@ -21,7 +21,7 @@ This folder contains all the output from the simulations and the analysis of the
     - [`output/mcmcSampSPDchain3.RData`](output/mcmcSampSPDchain3.RData)
     - [`output/mcmcSampSPDchain4.RData`](output/mcmcSampSPDchain4.RData)
     
-- Post-processing results from the Seattle PD analysis are in [`output/resultsSPD.RData`](output/resultsSPD.RData). Processing the MCMC samples can take a long time, so this file is provided to avoid the need to re-run the post-processing code. The script `code/post mcmc analysis.R` contains the code that generated this file.
+- Post-processing results from the Seattle PD analysis are in [`output/resultsSPD.RData`](output/resultsSPD.RData). Processing the MCMC samples can take a long time, so this file is provided to avoid the need to re-run the post-processing code. The script [`code/postMCMCanalysis.R`](../code/postMCMCanalysis.R) contains the code that generated this file.
 
 - [`code/postMCMCanalysis.R`](../code/postMCMCanalysis.R) also generated the three pdf figures here
     - [`output/pairs3off1.pdf`](output/pairs3off1.pdf): Figure C1
