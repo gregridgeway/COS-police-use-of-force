@@ -23,7 +23,7 @@ This folder contains all the output from the simulations and the analysis of the
     
 - Post-processing results from the Seattle PD analysis are in [`output/resultsSPD.RData`](output/resultsSPD.RData). Processing the MCMC samples can take a long time, so this file is provided to avoid the need to re-run the post-processing code. The script `code/post mcmc analysis.R` contains the code that generated this file.
 
-- `code/post mcmc analysis.R` also generated the three pdf figures here
+- [`code/postMCMCanalysis.R`](../code/postMCMCanalysis.R) also generated the three pdf figures here
     - [`output/pairs3off1.pdf`](output/pairs3off1.pdf): Figure C1
     - [`output/s2s3.pdf`](output/s2s3.pdf): Figure C2
     - [`output/sDiffs.pdf`](output/sDiffs.pdf): Figure C3

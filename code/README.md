@@ -13,4 +13,4 @@ CODE - Conditional Ordinal Stereotype Model to Estimate Police Officers' Propens
 
 - [`mcmcSPD.R`](mcmcSPD.R) Analysis of use-of-force data from Seattle PD
 
-- [`post mcmc analysis.R`](post mcmc analysis.R) Analysis of the posterior samples from the three simulations and the Seattle PD data. Labels blocks of code that connect to specific sections, tables, and figures in the article
+- [`postMCMCanalysis.R`](postMCMCanalysis.R) Analysis of the posterior samples from the three simulations and the Seattle PD data. Labels blocks of code that connect to specific sections, tables, and figures in the article

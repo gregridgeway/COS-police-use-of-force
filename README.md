@@ -20,7 +20,7 @@ This repository also contains data and code for analyzing seven years of use-of-
 
 The output from the three simulation scripts and the Seattle PD script are the MCMC draws from the posterior distribution.
 
-The script [`code/post mcmc analysis.R`](code/post mcmc analysis.R) contains code to analyze the posterior samples from the three simulations and the Seattle PD data. The script labels blocks of code that connect to specific sections, tables, and figures in the article.
+The script [`code/postMCMCanalysis.R`](code/postMCMCanalysis.R) contains code to analyze the posterior samples from the three simulations and the Seattle PD data. The script labels blocks of code that connect to specific sections, tables, and figures in the article.
 
 # R package dependencies
 `dplyr`
