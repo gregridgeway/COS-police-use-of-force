@@ -25,7 +25,7 @@ for(iChain in 1:4)
     sDiff0  = thetaInit[(nTotOfficers+1):(nTotOfficers+2)],
     nIter   = 1000000,
     thin    = 100, 
-    sdProp  = 0.025)  # sdProp tuned to accept 23-25%
+    sdProp  = 0.03)  # sdProp tuned to accept 23-25%
   resSPD$rateAccept
 
   thetaInit <- resSPD$draws |> tail(1) |> as.numeric()
