@@ -70,12 +70,12 @@ thetaInit <- res$draws |> tail(1) |> as.numeric()
 thetaInit[(nTotOfficers+1):(nTotOfficers+2)] <- 
   exp(thetaInit[(nTotOfficers+1):(nTotOfficers+2)])
 
-save(res, thetaInit, d, lambda, s, file="mcmcSampOff10.RData", compress=TRUE)
+save(res, thetaInit, d, lambda, s, 
+     file="output/mcmcSampOff10.RData", compress=TRUE)
 
 
 
 # 10 officers in a chain, 19 incidents per officer ---------------------------
-
 set.seed(20010618)
 
 d0 <- d |> filter(id<=190)
@@ -98,5 +98,6 @@ thetaInit <- res$draws |> tail(1) |> as.numeric()
 thetaInit[(nTotOfficers+1):(nTotOfficers+2)] <- 
   exp(thetaInit[(nTotOfficers+1):(nTotOfficers+2)])
 
-save(res, thetaInit, d0, lambda, s, file="mcmcSampOff10small.RData", compress=TRUE)
+save(res, thetaInit, d0, lambda, s, 
+     file="output/mcmcSampOff10small.RData", compress=TRUE)
 

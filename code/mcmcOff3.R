@@ -81,7 +81,8 @@ thetaInit <- res$draws |> tail(1) |> as.numeric()
 thetaInit[(nTotOfficers+1):(nTotOfficers+2)] <- 
   exp(thetaInit[(nTotOfficers+1):(nTotOfficers+2)])
 
-save(res, thetaInit, d, lambda, s, file="mcmcSampOff3.RData", compress=TRUE)
+save(res, thetaInit, d, lambda, s, 
+     file="output/mcmcSampOff3.RData", compress=TRUE)
 
 
 
@@ -107,4 +108,5 @@ thetaInit <- res$draws |> tail(1) |> as.numeric()
 thetaInit[(nTotOfficers+1):(nTotOfficers+2)] <- 
   exp(thetaInit[(nTotOfficers+1):(nTotOfficers+2)])
 
-save(res, thetaInit, d0, lambda, s, file="mcmcSampOff3small.RData", compress=TRUE)
+save(res, thetaInit, d0, lambda, s, 
+     file="output/mcmcSampOff3small.RData", compress=TRUE)
