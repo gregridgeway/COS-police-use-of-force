@@ -17,7 +17,7 @@ This folder contains all the output from the simulations and the analysis of the
     - [`output/mcmcSampOff10.RData`](output/mcmcSampOff10.RData): MCMC samples for the large dataset with 144 incidents per officer
     - [`output/mcmcSampOff10small.RData`](output/mcmcSampOff10small.RData): MCMC samples for the small dataset with 19 incidents per officer
     
-- Seattle PD analysis, Section 5. Posterior draws from four independent MCMC chains, each with 1 million draws, 20,000 burn-in iterations, and thinning to every 100 draws
+- Seattle PD analysis, Section 5. Posterior draws from four independent MCMC chains, each with 1 million draws, 20,000 burn-in iterations, and thinning to every 100 draws (posted to github LFS)
     - [`output/mcmcSampSPDchain1.RData`](output/mcmcSampSPDchain1.RData)
     - [`output/mcmcSampSPDchain2.RData`](output/mcmcSampSPDchain2.RData)
     - [`output/mcmcSampSPDchain3.RData`](output/mcmcSampSPDchain3.RData)
@@ -41,7 +41,7 @@ This folder contains all the output from the simulations and the analysis of the
 
 ## Appendix F: Placebo test of outlier detection
 
-- MCMC samples from the placebo test The script [`code/mcmcSPDpermute.R`](../code/mcmcSPDpermute.R) runs the conditional ordinal stereotype model on permuted versions of the Seattle PD data. The MCMC samples are stored in the following files, each containing 1-2 million draws. I originally ran these on two separate machines, chain 1 and chain 4 generating 2M draws, and chains 2, 3, and 5 generating 1M draws each
+- MCMC samples from the placebo test The script [`code/mcmcSPDpermute.R`](../code/mcmcSPDpermute.R) runs the conditional ordinal stereotype model on permuted versions of the Seattle PD data. The MCMC samples are stored in the following files, each containing 1-2 million draws. I originally ran these on two separate machines, chain 1 and chain 4 generating 2M draws, and chains 2, 3, and 5 generating 1M draws each  (posted to github LFS)
     - [`mcmcSampSPDpermutechain1.RData`](mcmcSampSPDpermutechain1.RData) (2M draws)
     - [`mcmcSampSPDpermutechain2.RData`](mcmcSampSPDpermutechain2.RData) (1M draws)
     - [`mcmcSampSPDpermutechain3.RData`](mcmcSampSPDpermutechain3.RData) (1M draws)
