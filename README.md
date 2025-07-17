@@ -37,9 +37,9 @@ The script [`code/postMCMCanalysis.R`](code/postMCMCanalysis.R) contains code to
 
 ## Appendix F: Placebo test of outlier detection
 
-- [`mcmcSPDpermute.R`](mcmcSPDpermute.R) R script for Appendix F, placebo test that runs the conditional ordinal stereotype model on permuted versions of the Seattle data. Running this script requires several days to complete, about 8 days on a 40-core machine I used and about 15 days on a 16-core machine.
+- [`code/mcmcSPDpermute.R`](code/mcmcSPDpermute.R) R script for Appendix F, placebo test that runs the conditional ordinal stereotype model on permuted versions of the Seattle data. Running this script requires several days to complete, about 8 days on a 40-core machine I used and about 15 days on a 16-core machine.
 
-- [`postMCMCanalysisSPDpermute.R`](postMCMCanalysisSPDpermute.R) R script for processing the results of the MCMC draws produced from [`mcmcSPDpermute.R`](mcmcSPDpermute.R)
+- [`code/postMCMCanalysisSPDpermute.R`](code/postMCMCanalysisSPDpermute.R) R script for processing the results of the MCMC draws produced from [`code/mcmcSPDpermute.R`](code/mcmcSPDpermute.R)
 
 
 # Code for verifying calculations
