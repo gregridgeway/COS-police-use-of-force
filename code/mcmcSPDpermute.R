@@ -19,18 +19,23 @@ d$idOff <- d$idOff - 1
 
 nTotOfficers <- n_distinct(d$idOff)
 
-for(iChain in 1:5)
+for(iPermute in 1:5)
 {
-  cat("Chain: ",iChain,"\n")
-  set.seed(20010618 + iChain)
+  message("Permutation: ",iPermute,"\n")
+  set.seed(20010618 + iPermute)
   
-  thetaInit <- c(runif(nTotOfficers,-2,2), 0.5, 0.5)
-  if(iChain==4) # just to initialize somewhere else
-    thetaInit <- c(rep(0, nTotOfficers), 0.5, 0.5)
+  # permute y within incident
+  d <- d |>
+    group_by(id) |>
+    mutate(y=sample(y)) |>
+    ungroup()
+  
+  thetaInit <- c(rep(0.0, nTotOfficers), 0.5, 0.5)
   
   # originally split across two different machines
-  #   with different number of iterations
-  nIters <- ifelse(iChain %in% c(1,4), 2000000, 1000000)
+  #   with different number of iterations to make sure
+  #   1M was enough for convergence
+  nIters <- ifelse(iPermute %in% c(1,4), 2000000, 1000000)
   
   resSPD <- mcmcOrdinalStereotype(
     d, 
@@ -38,14 +43,13 @@ for(iChain in 1:5)
     sDiff0  = thetaInit[(nTotOfficers+1):(nTotOfficers+2)],
     nIter   = nIters,
     thin    = 100, 
-    sdProp  = 0.035) 
-  resSPD$rateAccept
+    sdProp  = 0.025) 
 
   thetaInit <- resSPD$draws |> tail(1) |> as.numeric()
   thetaInit[(nTotOfficers+1):(nTotOfficers+2)] <- 
     exp(thetaInit[(nTotOfficers+1):(nTotOfficers+2)])
 
   save(resSPD, thetaInit, 
-       file=paste0("output/mcmcSampSPDPermutechain",iChain,".RData"),
+       file=paste0("output/mcmcSampSPDPermutechain",iPermute,".RData"),
        compress = TRUE)
 }
