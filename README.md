@@ -30,7 +30,7 @@ The script [`code/postMCMCanalysis.R`](code/postMCMCanalysis.R) contains code to
 
 ## Appendix E: Simulations of dependence
 
-- [`mcmcOff3depend.R`](mcmcOff3depend.R) contains simulation code for three experiments
+- [`code/mcmcOff3depend.R`](code/mcmcOff3depend.R) contains simulation code for three experiments
     - Appendix E.1 Three officers where Officer 1 escalates/de-escalates others
     - Appendix E.2 Thirty officers where Officer 1 de-escalates peers and Officer 30 escalates them
     - Appendix E.3 A randomly selected "first" officer escalates or de-escalates peers
