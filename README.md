@@ -44,13 +44,13 @@ The script [`code/postMCMCanalysis.R`](code/postMCMCanalysis.R) contains code to
 
 # Code for verifying calculations
 
-- [`code/testCLcalculation.R`](code/testCLcalculation.R) A range of tests to ensure that the conditional likelihood calculation is correct. This script is not used to produce any results for the article. It shows a range of tests that were used to ensure the correctness of the calculations
+- [`code/testCLcalculations.R`](code/testCLcalculations.R) A range of tests to ensure that the conditional likelihood calculation is correct. This script is not used to produce any results for the article. It shows a range of tests that were used to ensure the correctness of the calculations
 
     - verify calculations are identical if using 
-        1. Complete enumeration (using arrangements::permutations)
-        2. C++ implementation of no-repeat Heap's algorithm
-        3. Lin, Wang, Hong (2023) computation of the Poisson-Multinomial (dpmd)
-        4. C++ implementation of the multi-dimensional discrete Fourier transform (logDenomDFT)
+        1. Complete enumeration (using `arrangements::permutations`)
+        2. C++ implementation of no-repeat Heap's algorithm (`denomHeaps_R`)
+        3. Lin, Wang, Hong (2023) computation of the Poisson-Multinomial (`dpmd`)
+        4. C++ implementation of the multi-dimensional discrete Fourier transform (`logDenomDFT`)
 
     - timing test comparing efficiency of multi-dimensional fast Fourier transform or the multi-dimension discrete Fourier transform
     
