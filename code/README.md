@@ -1,6 +1,8 @@
 CODE - Conditional Ordinal Stereotype Model to Estimate Police Officers' Propensity to Escalate Force
 ================
 
+# Code for main text of article
+
 - [`conditional_stereotype.cpp`](conditional_stereotype.cpp) contains the C++ code that parallelizes the conditional likelihood calculation by incident
 
 - [`mcmcConditionalStereotype.R`](mcmcConditionalStereotype.R) contains the Metropolis algorithm that samples from the posterior distribution of the conditional stereotype model parameters. Any script calling this script should first call `RcppParallel::setThreadOptions(numThreads = 8)`, editing `numThreads` to be appropriate for the computing environment.
@@ -14,6 +16,18 @@ CODE - Conditional Ordinal Stereotype Model to Estimate Police Officers' Propens
 - [`mcmcSPD.R`](mcmcSPD.R) Analysis of use-of-force data from Seattle PD
 
 - [`postMCMCanalysis.R`](postMCMCanalysis.R) Analysis of the posterior samples from the three simulations and the Seattle PD data. Labels blocks of code that connect to specific sections, tables, and figures in the article
+
+
+# Supplemental results code
+
+## Appendix F: Placebo test of outlier detection
+
+- [`mcmcSPDpermute.R`](mcmcSPDpermute.R) R script for Appendix F, placebo test that runs the conditional ordinal stereotype model on permuted versions of the Seattle data
+
+- [`postMCMCanalysisSPDpermute.R`](postMCMCanalysisSPDpermute.R) R script for processing the results of the MCMC draws produced from [`mcmcSPDpermute.R`](mcmcSPDpermute.R)
+
+
+# Code for verifying calculations
 
 - [`testCLcalculation.R`](testCLcalculation.R) A range of tests to ensure that the conditional likelihood calculation is correct. This script is not used to produce any results for the article. It shows a range of tests that were used to ensure the correctness of the calculations
 
