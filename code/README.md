@@ -20,6 +20,13 @@ CODE - Conditional Ordinal Stereotype Model to Estimate Police Officers' Propens
 
 # Supplemental results code
 
+## Appendix E: Simulations of dependence
+
+- [`mcmcOff3depend.R`](mcmcOff3depend.R) contains simulation code for three experiments
+    - Appendix E.1 Three officers where Officer 1 escalates/de-escalates others
+    - Appendix E.2 Thirty officers where Officer 1 de-escalates peers and Officer 30 escalates them
+    - Appendix E.3 A randomly selected "first" officer escalates or de-escalates peers
+
 ## Appendix F: Placebo test of outlier detection
 
 - [`mcmcSPDpermute.R`](mcmcSPDpermute.R) R script for Appendix F, placebo test that runs the conditional ordinal stereotype model on permuted versions of the Seattle data
