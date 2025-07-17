@@ -42,11 +42,11 @@ This folder contains all the output from the simulations and the analysis of the
 ## Appendix F: Placebo test of outlier detection
 
 - MCMC samples from the placebo test The script [`code/mcmcSPDpermute.R`](../code/mcmcSPDpermute.R) runs the conditional ordinal stereotype model on permuted versions of the Seattle PD data. The MCMC samples are stored in the following files, each containing 1-2 million draws. I originally ran these on two separate machines, chain 1 and chain 4 generating 2M draws, and chains 2, 3, and 5 generating 1M draws each  (posted to github LFS)
-    - [`output/mcmcSampSPDpermutechain1.RData`](mcmcSampSPDpermutechain1.RData) (2M draws)
-    - [`output/mcmcSampSPDpermutechain2.RData`](mcmcSampSPDpermutechain2.RData) (1M draws)
-    - [`output/mcmcSampSPDpermutechain3.RData`](mcmcSampSPDpermutechain3.RData) (1M draws)
-    - [`output/mcmcSampSPDpermutechain4.RData`](mcmcSampSPDpermutechain4.RData) (2M draws)
-    - [`output/mcmcSampSPDpermutechain5.RData`](mcmcSampSPDpermutechain4.RData) (1M draws)
+    - [`output/mcmcSampSPDPermutechain1.RData`](mcmcSampSPDPermutechain1.RData) (2M draws)
+    - [`output/mcmcSampSPDPermutechain2.RData`](mcmcSampSPDPermutechain2.RData) (1M draws)
+    - [`output/mcmcSampSPDPermutechain3.RData`](mcmcSampSPDPermutechain3.RData) (1M draws)
+    - [`output/mcmcSampSPDPermutechain4.RData`](mcmcSampSPDPermutechain4.RData) (2M draws)
+    - [`output/mcmcSampSPDPermutechain5.RData`](mcmcSampSPDPermutechain4.RData) (1M draws)
 
 - Analysis of the MCMC draws for the placebo tests
     - [`output/resultsSPDpermute.RData`](resultsSPDpermute.RData): This file contains the results of the post-processing of the MCMC samples from the placebo test. The script [`code/postMCMCanalysisSPDpermute.R`](../code/postMCMCanalysisSPDpermute.R) contains the code that generated this file
