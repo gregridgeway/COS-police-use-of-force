@@ -20,8 +20,7 @@ mcmcOrdinalStereotype <- function(d,
   iIncidentStart    <- which(!duplicated(d$id))-1 # -1 for C++
   nIncidentOfficers <- as.integer(table(d$id))
   nAccept <- 0
-  maxVal <- 0
-  
+
   s0 <- c(0,1,1+cumsum(exp(logSDiff0)))
   prior0 <- logPriorLambdaS(lambda0, logSDiff0)
   logCL0 <- logCLfull(lambda0, s0,
