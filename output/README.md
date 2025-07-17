@@ -32,6 +32,13 @@ This folder contains all the output from the simulations and the analysis of the
     
 # Supplementary appendix output
 
+## Appendix E: Simulations studying the effect of violations of conditional independence
+
+- Stored results for the three simulations
+    - [`mcmcSampOff3depend.RData`](mcmcSampOff3depend.RData): Simulation #1, three officers where Officer 1 escalates/de-escalates others
+    - [`mcmcSampOff30depend.RData`](mcmcSampOff30depend.RData): Simulation #2, thirty officers where Officer 1 de-escalates peers and Officer 30 escalates them
+    - [`mcmcSampOff3firstOff.RData`](mcmcSampOff3firstOff.RData): Simulation #3, a randomly selected "first" officer among three escalates or de-escalates peers
+
 ## Appendix F: Placebo test of outlier detection
 
 - MCMC samples from the placebo test The script [`code/mcmcSPDpermute.R`](../code/mcmcSPDpermute.R) runs the conditional ordinal stereotype model on permuted versions of the Seattle PD data. The MCMC samples are stored in the following files, each containing 1-2 million draws. I originally ran these on two separate machines, chain 1 and chain 4 generating 2M draws, and chains 2, 3, and 5 generating 1M draws each
