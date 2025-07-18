@@ -72,7 +72,7 @@ mcmcOrdinalStereotype <- function(d,
         cat("logA=NaN i=",i,"\n")
         logA <- -Inf
         save(lambda00, lambda0, lambda1, 
-             logDiff00, logSDiff0, logSDiff1,
+             logSDiff00, logSDiff0, logSDiff1,
              file="../crashdump.RData")
         break
       }
