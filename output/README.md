@@ -46,7 +46,7 @@ This folder contains all the output from the simulations and the analysis of the
     - [`output/mcmcSampSPDPermutechain2.RData`](mcmcSampSPDPermutechain2.RData) (1M draws)
     - [`output/mcmcSampSPDPermutechain3.RData`](mcmcSampSPDPermutechain3.RData) (1M draws)
     - [`output/mcmcSampSPDPermutechain4.RData`](mcmcSampSPDPermutechain4.RData) (2M draws)
-    - [`output/mcmcSampSPDPermutechain5.RData`](mcmcSampSPDPermutechain4.RData) (1M draws)
+    - [`output/mcmcSampSPDPermutechain5.RData`](mcmcSampSPDPermutechain5.RData) (1M draws)
 
 - Analysis of the MCMC draws for the placebo tests
     - [`output/resultsSPDpermute.RData`](resultsSPDpermute.RData): This file contains the results of the post-processing of the MCMC samples from the placebo test. The script [`code/postMCMCanalysisSPDpermute.R`](../code/postMCMCanalysisSPDpermute.R) contains the code that generated this file
