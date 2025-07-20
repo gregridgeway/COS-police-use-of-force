@@ -9,7 +9,7 @@ authors:
     affiliation: University of Pennsylvania
 year: 2025
 version: "1.0"
-repository-code: "https://github.com/username/COS-police-use-of-force"
+repository-code: "https://github.com/gregridgeway/COS-police-use-of-force"
 references:
   - type: dataset
     title: "Seattle Police Department Use-of-Force Data"
