@@ -36,7 +36,7 @@ CODE - Conditional Ordinal Stereotype Model to Estimate Police Officers' Propens
 
 # Code for verifying calculations
 
-- [`testCLcalculation.R`](testCLcalculation.R) A range of tests to ensure that the conditional likelihood calculation is correct. This script is not used to produce any results for the article. It shows a range of tests that were used to ensure the correctness of the calculations
+- [`testCLcalculations.R`](testCLcalculations.R) A range of tests to ensure that the conditional likelihood calculation is correct. This script is not used to produce any results for the article. It shows a range of tests that were used to ensure the correctness of the calculations
 
     - verify calculations are identical if using 
         1. Complete enumeration (using arrangements::permutations)

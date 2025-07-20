@@ -35,9 +35,9 @@ This folder contains all the output from the simulations and the analysis of the
 ## Appendix E: Simulations studying the effect of violations of conditional independence
 
 - Stored results for the three simulations
-    - [`output/mcmcSampOff3depend.RData`](mcmcSampOff3depend.RData): Simulation #1, three officers where Officer 1 escalates/de-escalates others
-    - [`output/mcmcSampOff30depend.RData`](mcmcSampOff30depend.RData): Simulation #2, thirty officers where Officer 1 de-escalates peers and Officer 30 escalates them
-    - [`output/mcmcSampOff3firstOff.RData`](mcmcSampOff3firstOff.RData): Simulation #3, a randomly selected "first" officer among three escalates or de-escalates peers
+    - [`output/mcmcOff3depend.RData`](mcmcOff3depend.RData): Simulation #1, three officers where Officer 1 escalates/de-escalates others
+    - [`output/mcmcOff30depend.RData`](mcmcOff30depend.RData): Simulation #2, thirty officers where Officer 1 de-escalates peers and Officer 30 escalates them
+    - [`output/mcmcOff3firstOff.RData`](mcmcOff3firstOff.RData): Simulation #3, a randomly selected "first" officer among three escalates or de-escalates peers
 
 ## Appendix F: Placebo test of outlier detection
 
@@ -46,7 +46,7 @@ This folder contains all the output from the simulations and the analysis of the
     - [`output/mcmcSampSPDPermutechain2.RData`](mcmcSampSPDPermutechain2.RData) (1M draws)
     - [`output/mcmcSampSPDPermutechain3.RData`](mcmcSampSPDPermutechain3.RData) (1M draws)
     - [`output/mcmcSampSPDPermutechain4.RData`](mcmcSampSPDPermutechain4.RData) (2M draws)
-    - [`output/mcmcSampSPDPermutechain5.RData`](mcmcSampSPDPermutechain4.RData) (1M draws)
+    - [`output/mcmcSampSPDPermutechain5.RData`](mcmcSampSPDPermutechain5.RData) (1M draws)
 
 - Analysis of the MCMC draws for the placebo tests
     - [`output/resultsSPDpermute.RData`](resultsSPDpermute.RData): This file contains the results of the post-processing of the MCMC samples from the placebo test. The script [`code/postMCMCanalysisSPDpermute.R`](../code/postMCMCanalysisSPDpermute.R) contains the code that generated this file
