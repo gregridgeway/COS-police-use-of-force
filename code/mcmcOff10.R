@@ -24,6 +24,7 @@ d <- d |> filter(!(id %in% a))
 
 lambda <- c(-0.25,1.75,-1.75,1.25,2.25,-0.75,0.25,-2.25,-1.25,0.75)
 s <- c(0, 1, 1.5, 2)
+# h <- 0 # try with equal baseline rate of force types
 
 p <- t(exp(s %*% t(lambda)))
 p <- p/rowSums(p)
