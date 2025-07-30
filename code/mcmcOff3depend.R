@@ -127,13 +127,16 @@ label_expressions <- setNames(
   param_levels)
 
 ## Figure E1 ------------------------------------------------------------------
-ggplot(plot_df, aes(x = delta, y = median, color = parameter, fill = parameter)) +
+ggplot(plot_df, aes(x = delta, y = median, color = parameter, 
+                    fill = parameter)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2, color = NA) +
-  geom_line(size = 1.2) +
+  geom_line(linewidth = 1.2) +
   geom_line(data = curve_df, aes(x = delta, y = value, color = parameter),
-            linetype = "dashed", size = 1) +
-  scale_color_manual(values = c("#1b9e77", "#d95f02"), labels = label_expressions) +
-  scale_fill_manual(values = c("#1b9e77", "#d95f02"), labels = label_expressions) +
+            linetype = "dashed", linewidth = 1) +
+  scale_color_manual(values = c("#1b9e77", "#d95f02"), 
+                     labels = label_expressions) +
+  scale_fill_manual(values = c("#1b9e77", "#d95f02"), 
+                    labels = label_expressions) +
   labs(x = expression(delta),
        y = expression(lambda[i] - lambda[1]),
        color = NULL,
@@ -172,9 +175,9 @@ label_expressions <- setNames(
 
 ## Figure E2 ------------------------------------------------------------------
 ggplot(ranks_df, aes(x = delta, y = rank, color = parameter)) +
-  geom_line(size = 1.2) +
+  geom_line(linewidth = 1.2) +
   geom_line(data = curve_df, aes(x = delta, y = value, color = parameter),
-            linetype = "dashed", size = 1) +
+            linetype = "dashed", linewidth = 1) +
   scale_color_manual(values = brewer.pal(3, "Set2"),
                      labels = label_expressions) +
   labs(x = expression(delta),
@@ -345,7 +348,6 @@ nOff <- sample(2:3, nIncidents, replace = TRUE)
 # simulate with these parameters
 lambda <- c(-1, -0.5, 0)
 s <- c(0, 1, 1.05, 1.15)
-# thetaInit <- c(rep(0, nTotOfficers), 0.5, 0.5)
 thetaInit <- c(lambda, 0.5, 0.5)
 
 design <- data.frame(delta=seq(-1,1,length=21),
@@ -366,7 +368,7 @@ for(iIter in 1:nrow(design))
            .by = c(id, idOff)) |>
     mutate(lambda00 = lambda0 + 
              (row_number() != 1) *          # not the first row in this id
-             (first(y0)    > 1) *            # first officer used force
+             (first(y0)    > 1) *           # first officer used force
              design$delta[iIter],
            .by = id) |>
     mutate(y00 = sample(1:4, 1, prob = exp(s * lambda00)),
@@ -464,13 +466,16 @@ label_expressions <- setNames(
 palette_colors <- viridis(n = length(param_levels), option = "D")
 
 ## Figure E4 -------------------------------------------------------------------
-ggplot(plot_df, aes(x = delta, y = median, color = parameter, fill = parameter)) +
+ggplot(plot_df, aes(x = delta, y = median, color = parameter, 
+                    fill = parameter)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2, color = NA) +
-  geom_line(size = 1.2) +
+  geom_line(linewidth = 1.2) +
   geom_line(data = curve_df, aes(x = delta, y = value, color = parameter),
-            linetype = "dashed", size = 1) +
-  scale_color_manual(values = palette_colors, labels = label_expressions[param_levels]) +
-  scale_fill_manual(values = palette_colors, labels = label_expressions[param_levels]) +
+            linetype = "dashed", linewidth = 1) +
+  scale_color_manual(values = palette_colors, 
+                     labels = label_expressions[param_levels]) +
+  scale_fill_manual(values = palette_colors, 
+                    labels = label_expressions[param_levels]) +
   labs(x = expression(delta),
        y = expression(lambda[i] - lambda[1]),
        color = NULL,
