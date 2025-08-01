@@ -617,7 +617,7 @@ burnin <- 200
 chains <- lapply(chains, function(x) x[-(1:burnin),])
 postDraws <- do.call(rbind, chains)
 
-## Table 4 --------------------------------------------------------------------
+## Posterior means of s2 and s3 in main text ----------------------------------
 postDraws[,1504:1507] |> 
   apply(2, function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
   round(2) |> t()
@@ -668,7 +668,7 @@ with_progress({
 save(resultsSchur, file="output/resultsSPD.RData")
 
 
-## Table 5 --------------------------------------------------------------------
+## Table 4 --------------------------------------------------------------------
 resultsSchur |>
   select(idOff,nOff,nInc,force0,force1,force2,force3,
          pRankTop5pct) |>
@@ -770,11 +770,12 @@ igraph::E(net)
 # conditional variances discussed in Section 5
 schurComp[iID, c(536, 993, 1018, 1033, 232, 435)] |> round(2)
 
-# Figure 7 --------------------------------------------------------------------
+## Figure 7 --------------------------------------------------------------------
 ## create set O_i, with t<0.3
 iPeers <- which(schurComp[iID,] < 0.3)
 R <- apply(postDraws[,iPeers], 1, rank)
 Rpostint <- apply(R, 1, quantile, prob=c(0.025,0.5,0.975))
+
 j <- order(Rpostint[2,])
 iZoom <- tail(1:length(iPeers), 60)
 par(mai=0.02+c(0.8,0.8,0.4,0.4))
@@ -790,10 +791,11 @@ box()
 axis(2)
 axis(1,at=(1:length(j))[iZoom], 
      labels = iPeers[j][iZoom], 
-     las=2, cex.axis=0.5)
-for(k in (1:ncol(Rpostint))[iZoom]) 
+     las=2, cex.axis=0.7)
+for(k in (1:ncol(Rpostint))[iZoom])
 {
-  lines(c(k,k), Rpostint[c(1,3),j[k]], col="red")
+  lines(c(k,k), Rpostint[c(1,3),j[k]], col="red",
+        lwd = ifelse(iPeers[j[k]]==1006, 4, 1))
   points(k, Rpostint[2,j[k]], pch=16)
 }
 abline(h = length(iPeers)*0.95, col="gray")
