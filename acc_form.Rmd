@@ -1,11 +1,12 @@
 ---
-title: "Reproducibility of A Conditional Ordinal Stereotype Model to Estimate Police
-  Officers' Propensity to Escalate Force"
+title: Reproducibility of A Conditional Ordinal Stereotype Model to Estimate Police
+  Officers' Propensity to Escalate Force
 author:
 - affiliation: University of Pennsylvania
   email: gridge@upenn.edu
   name: Greg Ridgeway
 date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: pdf_document
 ---
 
 <!--HOW TO COMPLETE THIS FORM:-->
