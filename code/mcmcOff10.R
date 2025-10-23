@@ -1,5 +1,5 @@
 
-# 10 officers in a chain, 144 incidents per officer ---------------------------
+# 10 officers in a chain, 250 incidents per officer ---------------------------
 
 library(dplyr)
 
@@ -85,10 +85,9 @@ save(res, thetaInit, d, lambda, s,
 
 
 
-# 10 officers in a chain ------------------------------------------------------
+# 24 uses-of-force per officer, matching SPD data -----------------------------
 set.seed(20010618)
 
-# 24 uses-of-force per officer, matching SPD data
 idMax <- d |> 
   count(id) |> 
   mutate(nUoF = cumsum(n)) |> 

@@ -5,7 +5,7 @@ RcppParallel::setThreadOptions(numThreads = 8)
 source("code/mcmcConditionalStereotype.R")
 
 
-# 3 officers, 100 incidents per officer --------------------------------------
+# 3 officers, 250 incidents per officer --------------------------------------
 
 set.seed(20010618)
 nIncidents <- 1000
