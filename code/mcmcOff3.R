@@ -5,10 +5,10 @@ RcppParallel::setThreadOptions(numThreads = 8)
 source("code/mcmcConditionalStereotype.R")
 
 
-# 3 officers, ~100 incidents per officer --------------------------------------
+# 3 officers, 100 incidents per officer --------------------------------------
 
 set.seed(20010618)
-nIncidents <- 500
+nIncidents <- 1000
 # number of officers per incident
 nOff <- sample(2:3, nIncidents, replace = TRUE)
 # randomly assign officers to incidents
@@ -50,8 +50,17 @@ d <- d |>
                filter(nUniqueY > 1) |>
                select(id)) |>
   select(-p) |>
-  mutate(id = as.integer(as.factor(id))) # renumber 1, 2, 3, ...
+  mutate(id = as.integer(as.factor(id))) |> # renumber 1, 2, 3, ...
+  arrange(id, idOff)
 
+# 100 uses-of-force per officer
+idMax <- d |>
+  count(id) |>
+  mutate(nUoF = cumsum(n)) |>
+  filter(nUoF < 3 * 250) |> # less than here
+  slice_max(id) |>
+  pull(id) + 1              # then +1 here
+d <- d |> filter(id <= idMax)
 
 # make 0-based for C++
 d$y     <- d$y - 1
@@ -72,9 +81,9 @@ system.time({
     lambda0 = thetaInit[1:nTotOfficers],
     sDiff0  = thetaInit[(nTotOfficers+1):(nTotOfficers+2)],
     nIter   = 200000,
-    thin    = 20, 
-    sdProp  = 0.2)
-})
+    thin    = 20,
+    sdProp  = 0.21)
+    })
 res$rateAccept
 
 thetaInit <- res$draws |> tail(1) |> as.numeric()
@@ -86,9 +95,18 @@ save(res, thetaInit, d, lambda, s,
 
 
 
-# 3 officers, 10 incidents per officer --------------------------------------
+# 3 officers, 24 UoF per officer --------------------------------------
 set.seed(20010618)
-d0 <- d |> filter(id <= 30)
+
+# 24 uses-of-force per officer, matching SPD data
+idMax <- d |> 
+  count(id) |> 
+  mutate(nUoF = cumsum(n)) |> 
+  filter(nUoF < 3 * 24) |>
+  slice_max(id) |>
+  pull(id) + 1
+
+d0 <- d |> filter(id <= idMax)
 
 nTotOfficers <- n_distinct(d0$idOff)
 

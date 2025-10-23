@@ -4,15 +4,17 @@ library(dplyr)
 RcppParallel::setThreadOptions(numThreads = 8)
 source("code/mcmcConditionalStereotype.R")
 
-# 3+3 disconnected, 124 incidents per officers --------------------------------
+# 3+3 disconnected, 250 incidents per officers --------------------------------
 set.seed(20010618)
-nIncidents <- 500
+nIncidents <- 2000
 nOff <- sample(2:3, nIncidents, replace = TRUE)
-d1 <- data.frame(id=rep(1:nIncidents, nOff),
-                 idOff=sapply(nOff, function(x) sample(1:3, x)) |> unlist())
+d1 <- data.frame(id    = rep(1:nIncidents, nOff),
+                 idOff = sapply(nOff, function(x) sample(1:3, x)) |> unlist(),
+                 group = 1)
 nOff <- sample(2:3, nIncidents, replace = TRUE)
-d2 <- data.frame(id=rep(1:nIncidents, nOff),
-                 idOff=sapply(nOff, function(x) sample(1:3, x)) |> unlist())
+d2 <- data.frame(id    = rep(1:nIncidents, nOff),
+                 idOff = sapply(nOff, function(x) sample(1:3, x)) |> unlist(),
+                 group = 2)
 d2$id    <- d2$id    + max(d1$id) 
 d2$idOff <- d2$idOff + max(d1$idOff) 
 d <- rbind(d1,d2)
@@ -39,7 +41,21 @@ d <- d |>
               select(id),
              by = join_by(id)) |>
   select(-p) |>
-  mutate(id = as.integer(as.factor(id))) # renumber 1, 2, 3, ...
+  mutate(id = as.integer(as.factor(id))) |> # renumber 1, 2, 3, ...
+  arrange(id, idOff)
+
+# 250 uses-of-force per officer
+idMax <- d |>
+  group_by(group) |>
+  count(id) |>
+  mutate(nUoF = cumsum(n)) |>
+  filter(nUoF < 3 * 250) |> # less than here
+  slice_max(id) |>
+  pull(id) + 1              # then +1 here
+
+d <- d |> 
+  filter((group==1 & id <= idMax[1]) |
+         (group==2 & id <= idMax[2]))
 
 # make 0-based for C++
 d$y     <- d$y - 1
@@ -55,7 +71,7 @@ system.time({
     lambda0 = thetaInit[1:nTotOfficers],
     sDiff0  = thetaInit[(nTotOfficers+1):(nTotOfficers+2)],
     nIter   = 200000,
-    thin    = 20, 
+    thin    = 20,
     sdProp  = 0.13)
 })
 res$rateAccept
@@ -69,19 +85,22 @@ save(res, thetaInit, d, lambda, s,
 
 
 
-# 3+3 disconnected, 10 incidents per officers --------------------------------
+# 3+3 disconnected, 24 UoFs per officer --------------------------------
 
 set.seed(20010618)
-# use 30 with 1,2,3 and 30 with 4,5,6
-i <- d |> 
-  group_by(idOff <= 2) |> 
-  summarize(minID = min(id),
-            maxID = max(id)) 
-i <- c(sample(i$minID[2]:i$maxID[2], size=30),
-       sample(i$minID[1]:i$maxID[1], size=30))
+
+# 24 uses-of-force per officer, matching SPD data
+idMax <- d |> 
+  group_by(group) |>
+  count(id) |> 
+  mutate(nUoF = cumsum(n)) |> 
+  filter(nUoF < 3 * 24) |>
+  slice_max(id) |>
+  pull(id) + 1
+
 d0 <- d |> 
-  filter(id %in% i) |>
-  mutate(id = as.integer(as.factor(id))) # renumber 1, 2, 3, ...
+  filter((group==1 & id <= idMax[1]) |
+         (group==2 & id <= idMax[2]))
 
 
 system.time({

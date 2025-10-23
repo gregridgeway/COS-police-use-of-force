@@ -46,12 +46,21 @@ d <- d |>
                select(id),
              by = join_by(id)) |>
   select(-p) |>
-  mutate(id = as.integer(as.factor(id))) # renumber 1, 2, 3, ...
+  mutate(id = as.integer(as.factor(id))) |> # renumber 1, 2, 3, ...
+  arrange(id, idOff)
+
+# 100 uses-of-force per officer
+idMax <- d |>
+  count(id) |>
+  mutate(nUoF = cumsum(n)) |>
+  filter(nUoF < 10 * 250) |> # less than here
+  slice_max(id) |>
+  pull(id) + 1              # then +1 here
+d <- d |> filter(id <= idMax)
 
 # make 0-based for C++
 d$y     <- d$y - 1
 d$idOff <- d$idOff - 1
-
 
 nTotOfficers <- n_distinct(d$idOff)
 
@@ -62,8 +71,8 @@ system.time({
     lambda0 = thetaInit[1:nTotOfficers],
     sDiff0  = thetaInit[(nTotOfficers+1):(nTotOfficers+2)],
     nIter   = 200000,
-    thin    = 20, 
-    sdProp  = 0.095)
+    thin    = 20,
+    sdProp  = 0.12)
 })
 res$rateAccept
 
@@ -76,10 +85,18 @@ save(res, thetaInit, d, lambda, s,
 
 
 
-# 10 officers in a chain, 19 incidents per officer ---------------------------
+# 10 officers in a chain ------------------------------------------------------
 set.seed(20010618)
 
-d0 <- d |> filter(id<=190)
+# 24 uses-of-force per officer, matching SPD data
+idMax <- d |> 
+  count(id) |> 
+  mutate(nUoF = cumsum(n)) |> 
+  filter(nUoF < 10 * 24) |>
+  slice_max(id) |>
+  pull(id) + 1
+
+d0 <- d |> filter(id <= idMax)
 
 nTotOfficers <- n_distinct(d$idOff)
 
@@ -90,8 +107,8 @@ system.time({
     lambda0 = thetaInit[1:nTotOfficers],
     sDiff0  = thetaInit[(nTotOfficers+1):(nTotOfficers+2)],
     nIter   = 200000,
-    thin    = 20, 
-    sdProp  = 0.25)
+    thin    = 20,
+    sdProp  = 0.29)
 })
 res$rateAccept
 
