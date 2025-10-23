@@ -75,14 +75,16 @@ i <- grep("^\\\\mathrm\\{rank\\}", tab$parm)
 tab[i,c("postmean","l95","u95")] <- a
 
 
-# "all the values of Var(λj | λi, data) were small, less than 0.042 for the 345 incident simulation"
+# "all the values of Var(λj | λi, data) were small, less than 0.06 for the 250 uses-of-force per officer simulation..."
 Sigma <- cov(postDraws$lambda)
 schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> t() |> zapsmall()
 range(schurComp[schurComp>0])
 
 # not used in article, but show pairs plot
 pairs(postDraws$lambda,
-      labels=c(expression(lambda[1]),expression(lambda[2]),expression(lambda[3])),
+      labels=c(expression(lambda[1]),
+               expression(lambda[2]),
+               expression(lambda[3])),
       pch=".")
 plot(postDraws$s, xlab=expression(s[2]), ylab=expression(s[3]), 
      pch=".", log="xy")
@@ -115,7 +117,7 @@ a <- apply(postDraws$lambda, 1, rank) |>
 i <- grep("^\\\\mathrm\\{rank\\}", tab$parm)
 tab[i,c("postmeanSmall","l95small","u95small")] <- a
 
-# "and less than 0.20 for the 30 incident simulation"
+# "...and less than 0.28 for the 24 uses-of-force per officer simulation."
 Sigma <- cov(postDraws$lambda)
 schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> 
   t() |> zapsmall()
@@ -125,7 +127,10 @@ range(schurComp[schurComp>0])
 ## Appendix C, Figure C1 ------------------------------------------------------
 pdf("output/pairs3off1.pdf", width=7, height=5)
 pairs(postDraws$lambda, 
-      labels=c(expression(lambda[1]),expression(lambda[2]),expression(lambda[3])),
+      labels=c(expression(lambda[1]),
+               expression(lambda[2]),
+               expression(lambda[3])),
+      cex.axis = 0.8,
       pch=".")
 dev.off()
 
@@ -138,8 +143,11 @@ dev.off()
 ## Appendix C, Figure C3 ------------------------------------------------------
 pdf("output/sDiffs.pdf", width=7, height=5)
 plot(postDraws$s[,1]-1, (postDraws$s[,2]-postDraws$s[,1]), 
-     xlab=expression(s[2]-s[1]), ylab=expression(s[3]-s[2]), 
-     pch=".", log="xy")
+     xlab=expression(s[2]-s[1]), 
+     ylab=expression(s[3]-s[2]), 
+     pch=".", 
+     log="xy", 
+     cex.axis=0.8)
 dev.off()
 
 ## Table 1 ---------------------------------------------------------------------
@@ -265,7 +273,7 @@ postDraws$lambda |>
         pch=".")
 
 
-# 3+3 officers, 10 incidents/officer ------------------------------------------
+# 3+3 officers, 24 incidents/officer ------------------------------------------
 load("output/mcmcSampOff6small.RData")
 nOff <- n_distinct(d$idOff)
 d0$idOff <- d0$idOff + 1 # back to R indexing
@@ -447,7 +455,7 @@ a <- apply(postDraws$lambda, 1, rank) |>
 i <- grep("lambda_", tabRanks$parm)
 tabRanks[i,c("postmean","l95","u95")] <- a
 
-# "If we fixed the value of λ1, values of Var(λ−1 | λ1, data) range from around 0.05 for Officers 2 and 3 up to 0.13 for Officer 10."
+# "If we fixed the value of λ1, values of Var(λ−1 | λ1, data) range from around 0.05 for Officers 2 and 3 up to 0.19 for Officer 10."
 Sigma <- cov(postDraws$lambda)
 schurComp <- sapply(1:nOff, function(i) diag(Sigma) - Sigma[,i]^2/Sigma[i,i]) |> 
   t() |> zapsmall()
@@ -465,7 +473,7 @@ plot((1:10), a,
 
 
 
-# 10 officers in a chained network, 19 incidents/officer ----------------------
+# 10 officers in a chained network, 24 incidents/officer ----------------------
 load("output/mcmcSampOff10small.RData")
 nOff <- n_distinct(d0$idOff)
 d0$idOff <- d0$idOff + 1 # back to R indexing
@@ -565,7 +573,7 @@ tabRanks |>
 
 
 # Section 4.3
-# "The model estimates that with 0.95 posterior probability Officer 8 is among the two officers with the smallest λ (in truth it is the smallest). The posterior probability that Officer 5 has the largest λ is 0.48 and a 0.86 probability that it is among the top two (in truth it is the largest)."
+# "The model estimates that with 0.86 posterior probability Officer 8 is among the two officers with the smallest $\lambda$ (in truth it is the smallest). The posterior probability that Officer 5 has the largest $\lambda$ is 0.27 and a 0.71 probability that it is among the top two (in truth it is the largest)."
 R <- apply(postDraws$lambda, 1, rank)
 #   is 8 the smallest?
 apply(R, 2, function(x) x[8] <= 2) |> mean()
@@ -651,16 +659,23 @@ with_progress({
   resultsSchur <- foreach(iID=1:nOff, .combine=rbind) %dopar%
   {
     p(sprintf("Processing officer %d", iID))
+    
+    # find peers
     iPeers <- (1:nOff)[schurComp[iID,] < 0.3] |> setdiff(iID)
+    # find rank of officer iID relative to officers iPeers
     R <- apply(postDraws[, c(iID,iPeers)], 1, rank1)
     
+    lam0 <- postDraws[,c(iID,iPeers)]
+    lam0 <- lam0[,1] - rowMeans(lam0)
+
     res <- data.frame(idOff=iID,
                       nOff = length(iPeers),
                       nInc = sum(d$idOff==iID),
                       pRankTop5pct = mean(R >= 0.95*(1+length(iPeers))),
                       pRankBot5pct = mean(R <= 0.05*(1+length(iPeers))),
-                      lambdaDiffPeerMean = mean(postDraws[,iID]) - 
-                        mean(postDraws[,iPeers]))
+                      lamMean = mean(lam0),
+                      lam025 = quantile(lam0, prob=0.025) |> as.numeric(),
+                      lam975 = quantile(lam0, prob=0.975) |> as.numeric())
     res[,c("force0","force1","force2","force3")] <- table(factor(d$y)[d$idOff==iID])
     return(res)
   }
@@ -671,19 +686,24 @@ save(resultsSchur, file="output/resultsSPD.RData")
 ## Table 4 --------------------------------------------------------------------
 resultsSchur |>
   select(idOff,nOff,nInc,force0,force1,force2,force3,
-         pRankTop5pct) |>
+         pRankTop5pct,
+         lamMean,lam025,lam975) |>
   filter(pRankTop5pct > 0.80) |>
   arrange(desc(pRankTop5pct)) |>
-  xtable(digits = c(0,0,0,0,0,0,0,0,2)) |>
+  xtable(digits = c(0,0,0,0,0,0,0,0,2,2,2,2)) |>
   print(include.rownames=FALSE)
+
+# translate lambda to propensity to escalate
+exp(1.99*diff(c(s0=0, s1=1, s2=1.05, s3=1.13)))
 
 # low-end outliers, not shown in article
 resultsSchur |>
   select(idOff,nOff,nInc,force0,force1,force2,force3,
-         pRankBot5pct) |>
+         pRankBot5pct,
+         lamMean,lam025,lam975) |>
   filter(nInc>5 & pRankBot5pct > 0.90) |>
   arrange(desc(pRankBot5pct)) |>
-  xtable(digits = c(0,0,0,0,0,0,0,0,2)) |>
+  xtable(digits = c(0,0,0,0,0,0,0,0,2,2,2,2)) |>
   print(include.rownames=FALSE)
 
 
