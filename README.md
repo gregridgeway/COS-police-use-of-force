@@ -2,7 +2,7 @@ Conditional Ordinal Stereotype Model to Estimate Police Officers' Propensity to 
 ================
 
 # Overview
-This repository contains the code and data associated with "A Conditional Ordinal Stereotype Model to Estimate Police Officers' Propensity to Escalate Force." The article introduced a conditional ordinal stereotype model for estimating a police officer's latent propensity to escalate to higher-severity force options during an encounter. Propensity to escalate is the likelihood of selecting a more serious force category than peer officers confronting the same circumstances. The associated conditional likelihood depends solely on data from the times and places where multiple officers use various forms of force. All shared situational and environmental features cancel out of the conditional likelihood, eliminating the need to observe or model them explicitly.
+This repository contains the code and data associated with "[A Conditional Ordinal Stereotype Model to Estimate Police Officers' Propensity to Escalate Force](https://www.tandfonline.com/doi/full/10.1080/01621459.2025.2597050)." The article introduced a conditional ordinal stereotype model for estimating a police officer's latent propensity to escalate to higher-severity force options during an encounter. Propensity to escalate is the likelihood of selecting a more serious force category than peer officers confronting the same circumstances. The associated conditional likelihood depends solely on data from the times and places where multiple officers use various forms of force. All shared situational and environmental features cancel out of the conditional likelihood, eliminating the need to observe or model them explicitly.
 
 # Core analytical components
 
