@@ -6,6 +6,8 @@ This repository contains the code and data associated with "[A Conditional Ordin
 
 For an extended presentation of the mathematical details, including the uniqueness property of the model, see [COSmathDetails.pdf](COSmathDetails.pdf). 
 
+For notes on handling the case where a police department does not record information on witness officers, see [COSnowitness.pdf](COSnowitness.pdf). 
+
 # Core analytical components
 
 Code for the conditional stereotype model is a blend of R and C++. The C++ code ([`code/conditional_stereotype.cpp`](code/conditional_stereotype.cpp)) contains the C++ code that parallelizes the conditional likelihood calculation by incident. For incidents with two officers, there is a simple, direct calculation. For incidents with three to seven officers, there is a no-repeats version of Heap's algorithm O(m!). For incidents with eight or more officers, there is a multi-dimensional discrete Fourier transform O(m^J). This arrangement results in the most efficient conditional likelihood calculation. The R script ([`code/mcmcConditionalStereotype.R`](code/mcmcConditionalStereotype.R)) contains the Metropolis algorithm that samples from the posterior distribution of the conditional stereotype model parameters using the C++ code for evaluating the conditional likelihood.
