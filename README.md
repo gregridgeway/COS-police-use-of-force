@@ -6,7 +6,10 @@ This repository contains the code and data associated with "[A Conditional Ordin
 
 For an extended presentation of the mathematical details, including the uniqueness property of the model, see [COSmathDetails.pdf](COSmathDetails.pdf). 
 
-For notes on handling the case where a police department does not record information on witness officers, see [COSnowitness.pdf](COSnowitness.pdf). 
+I have created a document with some advances I have developed after the publication of the article. See [COSpostpubadvances.pdf](COSpostpubadvances.pdf). In this document you will find
+
+- Notes on handling the case where a police department does not record information on witness officers
+- A new dynamic programming algorithm to replace Heaps and the DFT for faster denominator calculations
 
 # Core analytical components
 
