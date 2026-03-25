@@ -8,7 +8,7 @@ source("code/mcmcConditionalStereotype.R")
 # 3 officers, 250 incidents per officer --------------------------------------
 
 set.seed(20010618)
-nIncidents <- 1000
+nIncidents <- 10000
 # number of officers per incident
 nOff <- sample(2:3, nIncidents, replace = TRUE)
 # randomly assign officers to incidents
@@ -53,7 +53,7 @@ d <- d |>
   mutate(id = as.integer(as.factor(id))) |> # renumber 1, 2, 3, ...
   arrange(id, idOff)
 
-# 100 uses-of-force per officer
+# 250 uses-of-force per officer
 idMax <- d |>
   count(id) |>
   mutate(nUoF = cumsum(n)) |>
@@ -128,3 +128,96 @@ thetaInit[(nTotOfficers+1):(nTotOfficers+2)] <-
 
 save(res, thetaInit, d0, lambda, s, 
      file="output/mcmcSampOff3small.RData", compress=TRUE)
+
+
+
+# New test when data on witness officers are unavailable -----------------------
+#    added 2026-03-17
+
+set.seed(20010618)
+nIncidents <- 10000
+# number of officers per incident
+nOff <- sample(2:3, nIncidents, replace = TRUE)
+# randomly assign officers to incidents
+d <- data.frame(id=rep(1:nIncidents, nOff),
+                idOff=unlist(sapply(nOff, function(x) sample(1:3, x))))
+# simulate with these parameters
+lambda <- -c(0.5, 1, 2)
+s <- c(0, 1, 1.5, 2)
+
+# translate lambda & s to probabilities of using type of force
+p <- t(exp(s %*% t(lambda)))
+p <- p/rowSums(p)
+# simulate force used
+d$p <- p[d$idOff,]
+d$y <- apply(d$p, 1, function(x) sample(1:4, 1, prob=x))
+
+# drop witness officers and shift y down 1
+d <- d |>
+  filter(y > 1) |>
+  mutate(y = y-1)
+
+
+# keep only incidents that have more than one type of force used
+#   incidents with one type contribute 1 to conditional likelihood
+d <- d |>
+  right_join(d |> 
+               group_by(id) |>
+               summarize(nUniqueY = n_distinct(y)) |>
+               filter(nUniqueY > 1) |>
+               select(id)) |>
+  select(-p) |>
+  mutate(id = as.integer(as.factor(id))) |> # renumber 1, 2, 3, ...
+  arrange(id, idOff)
+
+# 250 uses-of-force per officer
+# idMax <- d |>
+#   count(id) |>
+#   mutate(nUoF = cumsum(n)) |>
+#   filter(nUoF < 3 * 250) |> # less than here
+#   slice_max(id) |>
+#   pull(id) + 1              # then +1 here
+# d <- d |> filter(id <= idMax)
+
+# make 0-based for C++
+d$y     <- d$y - 1
+d$idOff <- d$idOff - 1
+
+lambda0 <- -c(0.5, 1, 2)
+lambda1 <- lambda0 + c(0,0,1.5)
+s0 <- c(0, 1, 1.5)
+s1 <- s0 + c(0, 0, 0.1) 
+
+nTotOfficers <- n_distinct(d$idOff)
+
+thetaInit <- c(rep(0, nTotOfficers), 0.5)
+system.time({
+  res <- mcmcOrdinalStereotype(
+    d, 
+    lambda0 = thetaInit[1:nTotOfficers],
+    sDiff0  = thetaInit[nTotOfficers+1],
+    nIter   = 200000,
+    thin    = 20,
+    sdProp  = 0.09)
+})
+res$rateAccept
+
+thetaInit <- res$draws |> tail(1) |> as.numeric()
+thetaInit[4] <- exp(thetaInit[4])
+
+# post MCMC summaries
+postDraws <- list(lambda = res$draws[,1:3],
+                  sDelta = exp(res$draws[,4,drop=FALSE]))
+postDraws$s <- 1 + postDraws$sDelta
+
+c(mean(postDraws$s), quantile(postDraws$s,prob=c(0.025,0.975))) |>
+  round(2)
+s
+(s[-1]-1)/(s[3]-1)
+
+apply(postDraws$lambda[,1]-postDraws$lambda[,2:3], 2, 
+           function(x) c(mean(x), quantile(x,prob=c(0.025,0.975)))) |>
+  round(2) |> t()
+
+(lambda[1] - lambda[2:3]) * (s[3]-1)
+
