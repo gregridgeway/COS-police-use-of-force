@@ -1,6 +1,11 @@
 // [[Rcpp::depends(RcppParallel)]]
 #include <Rcpp.h>
 #include <RcppParallel.h>
+#include <vector>
+#include <cmath>
+#include <limits>
+#include <algorithm>
+
 using namespace Rcpp;
 using namespace RcppParallel;
 
@@ -102,9 +107,12 @@ double denomHeaps_R(IntegerVector ivY,
 
 // Discrete Fourier transform to compute denominator
 //   not used, but useful for verifying calculations in testing
-// Lin, Z., Wang, Y. & Hong, Y. The computing of the Poisson multinomial distribution and applications in ecological inference and machine learning. Comput Stat 38, 1851–1877 (2023). https://doi.org/10.1007/s00180-022-01299-0
-//   Equation 7, 8, 9
-//   time O(n^(m-1)), memory O(n*m)
+// Lin, Z., Wang, Y. & Hong, Y. (2023). "The computing of the Poisson 
+//   multinomial distribution and applications in ecological inference and 
+//   machine learning," Comput Stat 38, 1851–1877). 
+//   https://doi.org/10.1007/s00180-022-01299-0
+//      Equation 7, 8, 9
+//      time O(n^(m-1)), memory O(n*m)
 //   Faster than no-repeat Heaps when n>8, still works when n=60
 //   This implementation evaluates at one value of y
 //      R dpmd() computes entire pdf using FFT
@@ -224,7 +232,7 @@ double logDenomDFT(NumericVector nvLambda,
   }
   
   if (dSum <= 0.0) {
-    Rcout << "⚠️ dSum = " << dSum << " — clipped to small epsilon to avoid log error." << std::endl;
+    Rcout << "😱 dSum = " << dSum << " — clipped to small epsilon to avoid log error." << std::endl;
     dSum = 1e-9;
   }
   
@@ -233,12 +241,233 @@ double logDenomDFT(NumericVector nvLambda,
 
 
 
+// Dynamic program for computing Poisson Multinomial denominator
+//    Generalizes the Poisson Binomial algorithm of
+//    Barlow R.E. (1984). "Computing k-out-of-n System Reliability," 
+//       IEEE Transactions on Reliability, R-33 (4):322-323
+
+// Compute row-major strides for a (d)-dimensional array with extents dims[j].
+//   stride[0] = 1, stride[j] = prod_{t<j} dims[t]
+//   allows for O(1) indexing of states of u
+static std::vector<std::size_t> compute_strides(const std::vector<int>& dims) {
+  const int d = static_cast<int>(dims.size());
+  std::vector<std::size_t> strides(d, 1);
+  for (int j = 1; j < d; ++j) {
+    strides[j] = strides[j - 1] * static_cast<std::size_t>(dims[j - 1]);
+  }
+  return strides;
+}
+
+// [[Rcpp::export]]
+double logDenomDP(const std::vector<double>& vdLambda,
+                  const std::vector<double>& vdS,
+                  const std::vector<int>& viY)
+{
+  const int n = static_cast<int>(vdLambda.size()); // # officers
+  const int m = static_cast<int>(vdS.size());      // # force types
+  
+  // save compute time by skipping checks
+  // if (m <= 0) {
+  //   Rcpp::stop("logDenomDP: vdS must have length >= 1.");
+  // }
+  // if (static_cast<int>(viY.size()) != n) {
+  //   Rcpp::stop("logDenomDP: viY length must equal vdLambda length.");
+  // }
+  // for (int i = 0; i < n; ++i) {
+  //   const int yi = viY[i];
+  //   if (yi < 0 || yi >= m) {
+  //     Rcpp::stop("logDenomDP: viY contains an out-of-range category (must be in [0, m-1]).");
+  //   }
+  // }
+
+  // build row probabilities P and accumulate log normalizers dLogK
+  // P is stored row-major: P[i*m + j].
+  std::vector<double> vdP(static_cast<std::size_t>(n) * static_cast<std::size_t>(m));
+  double dLogK = 0.0;
+  
+  for (int i = 0; i < n; ++i) {
+    const std::size_t iRow = static_cast<std::size_t>(i) * static_cast<std::size_t>(m);
+    
+    double dMaxE = -std::numeric_limits<double>::infinity();
+    for (int j = 0; j < m; ++j) {
+      const double dEta = vdLambda[i] * vdS[j];
+      vdP[iRow + static_cast<std::size_t>(j)] = dEta;
+      if (dEta > dMaxE) dMaxE = dEta;
+    }
+    
+    double dSumP = 0.0;
+    for (int j = 0; j < m; ++j) {
+      const std::size_t idx = iRow + static_cast<std::size_t>(j);
+      const double dW = std::exp(vdP[idx] - dMaxE);
+      vdP[idx] = dW;
+      dSumP += dW;
+    }
+    
+    const double dInvSumP = 1.0 / dSumP;
+    for (int j = 0; j < m; ++j) {
+      vdP[iRow + static_cast<std::size_t>(j)] *= dInvSumP;
+    }
+    
+    dLogK += dMaxE + std::log(dSumP);
+  }
+  
+  // counts k
+  std::vector<int> viK(m, 0);
+  for (int i = 0; i < n; ++i) {
+    viK[viY[i]] += 1;
+  }
+  
+  // Shouldn't get here, but if m=1, the distribution is degenerate 
+  //    and the only "count" is n with prob 1
+  // In that case logDenom = sum_i log(exp(lambda_i * S0)) = dLogK 
+  //    (and DP is unnecessary)
+  if (m == 1) {
+    return dLogK;
+  }
+  
+  // DP state space: only first d = m-1 categories
+  //    last category count is implicit
+  const int d = m - 1;
+  
+  std::vector<int> dims(d);
+  // number of observations in first m−1 categories
+  int total_non_m = 0;
+  
+  std::size_t total_states = 1;
+  const std::size_t SIZE_MAX_ = std::numeric_limits<std::size_t>::max();
+  
+  for (int j = 0; j < d; ++j) {
+    const int dimj = viK[j] + 1;  // extent along dimension j
+    if (dimj <= 0) {
+      Rcpp::stop("logDenomDP: internal error; non-positive state dimension.");
+    }
+    dims[j] = dimj;
+    total_non_m += viK[j];
+    
+    const std::size_t dim_sz = static_cast<std::size_t>(dimj);
+    if (total_states > SIZE_MAX_ / dim_sz) {
+      Rcpp::stop("logDenomDP: state space too large (total_states overflow).");
+    }
+    total_states *= dim_sz;
+  }
+  
+  const std::vector<std::size_t> strides = compute_strides(dims);
+  
+  // Cache pointers for inner loops
+  const int* pK = viK.data();
+  const int* pDims = dims.data();
+  const std::size_t* pStrides = strides.data();
+  
+  std::vector<double> dp_old(total_states, 0.0);
+  std::vector<double> dp_new(total_states, 0.0);
+  dp_old[0] = 1.0;
+  
+  // Turn on by setting fRescale=true
+  //    adds one extra pass over dp_new per r
+  const bool fRescale = true;
+  double dLogRescale = 0.0;
+  
+  const int k_m = viK[m - 1];
+  
+  // Multi-index digits
+  //   u stores partial counts of categories 1,...,m-1 after processing 
+  //   first r-1 observations
+  std::vector<int> viU(d, 0);
+  int* pU = viU.data();
+  
+  for (int r = 1; r <= n; ++r) {
+    std::fill(dp_new.begin(), dp_new.end(), 0.0);
+    
+    const int lo = std::max(0, (r - 1) - k_m);
+    const int hi = std::min(r - 1, total_non_m);
+    
+    const double* P_row = &vdP[static_cast<std::size_t>(r - 1) * 
+                               static_cast<std::size_t>(m)];
+    const double Pm = P_row[m - 1];
+    
+    const double* pDP_old = dp_old.data();
+    double*       pDP_new = dp_new.data();
+    
+    // reset odometer digits and maintain sum_u incrementally
+    std::fill(viU.begin(), viU.end(), 0);
+    int sum_u = 0;
+    
+    for (std::size_t idx = 0; idx < total_states; ++idx) {
+      const double val = pDP_old[idx];
+      
+      if (val != 0.0 && sum_u >= lo && sum_u <= hi) {
+        // category m (no change in u)
+        pDP_new[idx] += Pm * val;
+        
+        // categories 1..m-1 (increment one coordinate if not at cap)
+        for (int j = 0; j < d; ++j) {
+          if (pU[j] < pK[j]) {
+            pDP_new[idx + pStrides[j]] += P_row[j] * val;
+          }
+        }
+      }
+      
+      // increment multi-index (odometer) and update sum_u
+      for (int j = 0; j < d; ++j) {
+        const int uj = ++pU[j];
+        ++sum_u;
+        
+        if (uj < pDims[j]) {
+          break; // no carry; done
+        }
+        
+        // carry: uj == pDims[j]; reset this digit
+        sum_u -= uj;   // subtract pDims[j]
+        pU[j] = 0;
+      }
+    }
+    
+    if (fRescale) {
+      // Scale by maximum entry to reduce underflow risk: 
+      //   dp_new /= scale
+      //   log_rescale += log(scale)
+      double dScale = 0.0;
+      for (std::size_t idx = 0; idx < total_states; ++idx) {
+        if (pDP_new[idx] > dScale) dScale = pDP_new[idx];
+      }
+      if (dScale <= 0.0) {
+        return -std::numeric_limits<double>::infinity();
+      }
+      const double dInvScale = 1.0 / dScale;
+      for (std::size_t idx = 0; idx < total_states; ++idx) {
+        pDP_new[idx] *= dInvScale;
+      }
+      dLogRescale += std::log(dScale);
+    }
+    
+    dp_old.swap(dp_new);
+  }
+  
+  // target index corresponds to u_j = k[j]  (j=0..d-1)
+  std::size_t target_idx = 0;
+  for (int j = 0; j < d; ++j) {
+    target_idx += static_cast<std::size_t>(pK[j]) * pStrides[j];
+  }
+  
+  const double dProb = dp_old[target_idx];
+  if (dProb <= 0.0) {
+    return -std::numeric_limits<double>::infinity();
+  }
+  
+  double dLogProb = std::log(dProb);
+  if (fRescale) dLogProb += dLogRescale;
+  
+  return dLogK + dLogProb;
+}
+
+
+
 // log conditional likelihood log L(lambda,s)
 double logCL(const std::vector<double>& vdLambda,
              int n0, // number of officers
              const std::vector<double>& vdS,
              const std::vector<int>& viY,
-             int iHeapsLimit)
+             int iMethod)
 {
   double dReturnVal = 0.0;
   
@@ -250,7 +479,7 @@ double logCL(const std::vector<double>& vdLambda,
   {
     dReturnVal = 0.0;
   }
-  // Hard code for n0=2, 3x faster than DFT
+  // Hard code for n0=2
   else if((n0==2) && (viY[0]!=viY[1])) 
   {
     dReturnVal = 
@@ -258,8 +487,8 @@ double logCL(const std::vector<double>& vdLambda,
       logSumExp(vdS[viY[0]]*vdLambda[0] + vdS[viY[1]]*vdLambda[1],
                 vdS[viY[1]]*vdLambda[0] + vdS[viY[0]]*vdLambda[1]);
   }
-  // recursive no-repeat Heaps for n0s where Heaps faster than DFT
-  else if((n0>2) && (n0<=iHeapsLimit))
+  // recursive no-repeat Heaps
+  else if((n0>2) && (iMethod==1))
   {
     dReturnVal = 0.0;
     // compute numerator log sum
@@ -268,6 +497,17 @@ double logCL(const std::vector<double>& vdLambda,
       dReturnVal += vdS[viY[i]]*vdLambda[i];
     }
     dReturnVal -= std::log(denomHeapsWrapper(viY, vdLambda, vdS));
+  }
+  // dynamic program
+  else if((n0>2) && (iMethod==3))
+  {
+    dReturnVal = 0.0;
+    // compute numerator log sum
+    for(int i=0; i<n0; i++)
+    {
+      dReturnVal += vdS[viY[i]]*vdLambda[i];
+    }
+    dReturnVal -= logDenomDP(vdLambda, vdS, viY);
   }
   // discrete Fourier transform for larger n
   else
@@ -384,7 +624,7 @@ double logCL(const std::vector<double>& vdLambda,
     }
     
     if (dSum < 0.0) {
-      Rcout << "⚠️ dSum = " << dSum << " — clipped to small epsilon to avoid log error." << std::endl;
+      Rcout << "😱 dSum = " << dSum << " — clipped to small epsilon to avoid log error." << std::endl;
       dSum = 1e-9;
     }
     
@@ -403,13 +643,13 @@ double logCL_R(NumericVector nvLambda,
                int n0, // number of officers
                NumericVector nvS,
                IntegerVector ivY,
-               int iHeapsLimit)
+               int iMethod)
 {
   std::vector<double> vLambda = Rcpp::as<std::vector<double>>(nvLambda);
   std::vector<double> vS      = Rcpp::as<std::vector<double>>(nvS);
   std::vector<int>    vY      = Rcpp::as<std::vector<int>>(ivY);
   
-  return logCL(vLambda, n0, vS, vY, iHeapsLimit);
+  return logCL(vLambda, n0, vS, vY, iMethod);
 }
 
 
@@ -475,7 +715,7 @@ struct LogCLWorker : public Worker {
       
       dLocalSum += logCL(vdLambda, nOff, 
                           vdStemp, viYTemp,
-                          7); // max/optimal for Heaps
+                          3); // use dynamic program
     }
     value += dLocalSum;
   }
