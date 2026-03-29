@@ -771,7 +771,7 @@ col[which(names(V(net))==iID)] <- "lightblue"
 i <- V(net) |> names() |> as.numeric()
 i <- i[schurComp[iID,i] > 0.6]
 border.col <- rep("black", length(unique(a$idOff)))
-border.col[which(names(V(net))==i)] <- "red"
+border.col[which(names(V(net)) %in% i)] <- "red"
 
 ## Figure 5 -------------------------------------------------------------------
 # Note: plot.igraph() layout changes each time generated
