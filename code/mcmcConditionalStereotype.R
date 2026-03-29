@@ -3,16 +3,16 @@ library(foreach)
 message("Compiling C++ code...")
 Rcpp::sourceCpp("code/conditional_stereotype.cpp")
 
-logPriorLambdaS <- function(lambda,logSDiff)
+logPriorLambdaS <- function(lambda, logSDiff, sdLambda=1)
 {
-  sum(dnorm(lambda, 0, 1, log = TRUE)) +
+  sum(dnorm(lambda, 0, sdLambda, log = TRUE)) +
     sum(dnorm(logSDiff, log(0.1), 1, log = TRUE))
 }
 
 
 mcmcOrdinalStereotype <- function(d, 
                                   lambda0, sDiff0, 
-                                  nIter=10000, thin=1, sdProp=0.1,
+                                  nIter=10000, thin=1, sdProp=0.1, sdLambda=1,
                                   printProgress = TRUE)
 {
   logSDiff0 <- log(sDiff0)
@@ -21,8 +21,8 @@ mcmcOrdinalStereotype <- function(d,
   nIncidentOfficers <- as.integer(table(d$id))
   nAccept <- 0
 
-  s0 <- c(0,1,1+cumsum(exp(logSDiff0)))
-  prior0 <- logPriorLambdaS(lambda0, logSDiff0)
+  s0 <- c(0, 1, 1+cumsum(exp(logSDiff0)))
+  prior0 <- logPriorLambdaS(lambda0, logSDiff0, sdLambda)
   logCL0 <- logCLfull(lambda0, s0,
                       d$idOff,
                       d$y,
@@ -56,9 +56,9 @@ mcmcOrdinalStereotype <- function(d,
       lambda1 <- rnorm(length(lambda0), lambda0, sdProp)
       logSDiff1 <- rnorm(length(logSDiff0), logSDiff0, sdProp)
       
-      s1 <- c(0,1,1+cumsum(exp(logSDiff1)))
+      s1 <- c(0, 1, 1+cumsum(exp(logSDiff1)))
       
-      prior1 <- logPriorLambdaS(lambda1, logSDiff1)
+      prior1 <- logPriorLambdaS(lambda1, logSDiff1, sdLambda)
       logCL1 <- logCLfull(lambda1, s1,
                           d$idOff,
                           d$y,
