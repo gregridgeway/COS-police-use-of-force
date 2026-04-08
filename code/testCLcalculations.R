@@ -220,6 +220,65 @@ lines(xseq, 1000000*exp(a) * xseq^b, col = "blue", lwd = 3)
 legend("topleft", legend = sort(unique(resDP$m)),
        col = cols, pch = 16, title = "m", cex = 0.7)
 
+# empirical O(state_updates) from m and prod(k+1)
+library(foreach)
+library(ggplot2)
+library(progressr)
+handlers(global = TRUE)
+handlers("txtprogressbar")
+
+load("data/dataSPD.RData")
+d$y     <- d$y - 1
+d$idOff <- d$idOff - 1
+
+s <- c(0, 1, 1.5, 2)
+a <- table(d$id)
+id2run <- names(a) |> as.numeric()
+
+
+with_progress({
+  p <- progressor(along = id2run)
+  
+  resAll <- foreach(i = seq_along(id2run), .combine = bind_rows) %do% 
+  {
+    p()  # update progress bar
+    
+    a      <- d |> filter(id == id2run[i])
+    k      <- table(factor(a$y, levels = 0:3))
+    kProd  <- prod(k + 1)
+    lambda <- seq(-1, 1, length.out = nrow(a))
+    
+    res       <- logDenomDP_count(lambda, s, a$y)$stats
+    res$m     <- nrow(a)
+    res$kProd <- kProd
+    res
+  }
+})
+
+# get estimated O(state_update) = m^a * prod(kj+1)^b
+lm1 <- lm(log(state_updates)~log(m)+log(kProd), data =resAll)
+summary(lm1)
+
+# plot against kProd, primary driver
+fit <- lm(log(state_updates) ~ log(kProd), data = resAll)
+rng <- range(resAll$kProd)
+pred <- data.frame(
+  kProd = rng,
+  yhat = predict(fit, newdata = data.frame(kProd = rng)) |> exp()
+)
+
+ggplot(resAll, aes(x = kProd, y = state_updates, color = m)) +
+  geom_point(alpha = 0.7) +
+  geom_line(data = pred, aes(x = kProd, y = yhat),
+            inherit.aes = FALSE,
+            color = "red", linewidth = 1) +
+  scale_x_continuous(transform = "log2") +
+  scale_y_continuous(transform = "log2") +
+  scale_color_viridis_c() +
+  labs(x = expression(prod (k[j] + 1)),
+       y = "Number of state updates",
+       color = "m") +
+  theme_minimal()
 
 
 # test acceptance probability calculations ------------------------------------

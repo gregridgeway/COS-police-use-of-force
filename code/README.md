@@ -43,9 +43,12 @@ CODE - Conditional Ordinal Stereotype Model to Estimate Police Officers' Propens
         2. C++ implementation of no-repeat Heap's algorithm
         3. Lin, Wang, Hong (2023) computation of the Poisson-Multinomial (dpmd)
         4. C++ implementation of the multi-dimensional discrete Fourier transform (logDenomDFT)
+        5. C++ implementation of a dynamic program (logDenomDP), added March 2026 post-publication
 
     - timing test comparing efficiency of multi-dimensional fast Fourier transform or the multi-dimension discrete Fourier transform
     
-    - timing test comparing efficiency of the C++ implementation of no-repeat Heap's algorithm and the C++ implementation of the multi-dimensional discrete Fourier transform. Determines how many officers at an incident before the DFT becomes more efficient than Heap's algorithm
+    - timing test comparing efficiency of the C++ implementation of no-repeat Heap's algorithm and the C++ implementation of the multi-dimensional discrete Fourier transform. Determines how many officers at an incident before the DFT becomes more efficient than Heap's algorithm. Added timing tests of dynamic program in March 2026.
+    
+    - empirically assessed computational complexity of dynamic program. Added C++ function logDenomDP_count that collects statistics on the computation (states visited, number of multiplications, number of exp() calls, etc.). Worst case computational complexity is O(m*J*K), where K = prod(k[j]+1). K behaves like (m/J)^J (worst case), so complexity is roughly O(m^(J+1)/J^(J-1)). Empirically with J=4, I observe O(m^1.35) (April 2026).
     
     - tests of the log conditional likelihood calculation in serial and in parallel

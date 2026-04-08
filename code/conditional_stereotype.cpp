@@ -461,6 +461,197 @@ double logDenomDP(const std::vector<double>& vdLambda,
 }
 
 
+// Version of logDenomDP that just counts computation effort
+//   does not return Poisson-Multinomial denominator
+//   just counts computation activity
+//      computation time largely driven by state_updates
+struct DPStats {
+  double state_updates = 0;   // number of DP transitions
+  double multiplications = 0;
+  double additions = 0;
+  double exp_calls = 0;
+  double log_calls = 0;
+  double dp_states_visited = 0;
+};
+
+// [[Rcpp::export]]
+Rcpp::List logDenomDP_count(const std::vector<double>& vdLambda,
+                            const std::vector<double>& vdS,
+                            const std::vector<int>& viY)
+{
+  DPStats stats;
+  
+  const int n = vdLambda.size();
+  const int m = vdS.size();
+  
+  std::vector<double> vdP(n * m);
+  double dLogK = 0.0;
+  
+  // --- Build probabilities ---
+  for (int i = 0; i < n; ++i) {
+    const std::size_t iRow = i * m;
+    
+    double dMaxE = -std::numeric_limits<double>::infinity();
+    
+    for (int j = 0; j < m; ++j) {
+      const double dEta = vdLambda[i] * vdS[j];
+      stats.multiplications++;
+      
+      vdP[iRow + j] = dEta;
+      if (dEta > dMaxE) dMaxE = dEta;
+    }
+    
+    double dSumP = 0.0;
+    for (int j = 0; j < m; ++j) {
+      const std::size_t idx = iRow + j;
+      
+      const double dW = std::exp(vdP[idx] - dMaxE);
+      stats.exp_calls++;
+      
+      vdP[idx] = dW;
+      dSumP += dW;
+      stats.additions++;
+    }
+    
+    const double dInvSumP = 1.0 / dSumP;
+    
+    for (int j = 0; j < m; ++j) {
+      vdP[iRow + j] *= dInvSumP;
+      stats.multiplications++;
+    }
+    
+    dLogK += dMaxE + std::log(dSumP);
+    stats.log_calls++;
+    stats.additions++;
+  }
+  
+  // --- counts ---
+  std::vector<int> viK(m, 0);
+  for (int i = 0; i < n; ++i) {
+    viK[viY[i]] += 1;
+  }
+  
+  if (m == 1) {
+    return Rcpp::List::create(
+      Rcpp::Named("log_value") = dLogK,
+      Rcpp::Named("stats") = Rcpp::List::create(
+        _["state_updates"] = stats.state_updates,
+        _["multiplications"] = stats.multiplications,
+        _["exp_calls"] = stats.exp_calls,
+        _["log_calls"] = stats.log_calls
+      )
+    );
+  }
+  
+  const int d = m - 1;
+  
+  std::vector<int> dims(d);
+  int total_non_m = 0;
+  std::size_t total_states = 1;
+  
+  for (int j = 0; j < d; ++j) {
+    dims[j] = viK[j] + 1;
+    total_non_m += viK[j];
+    total_states *= dims[j];
+  }
+  
+  const std::vector<std::size_t> strides = compute_strides(dims);
+  
+  std::vector<double> dp_old(total_states, 0.0);
+  std::vector<double> dp_new(total_states, 0.0);
+  dp_old[0] = 1.0;
+  
+  const bool fRescale = true;
+  double dLogRescale = 0.0;
+  
+  const int k_m = viK[m - 1];
+  
+  std::vector<int> viU(d, 0);
+  
+  for (int r = 1; r <= n; ++r) {
+    std::fill(dp_new.begin(), dp_new.end(), 0.0);
+    
+    const int lo = std::max(0, (r - 1) - k_m);
+    const int hi = std::min(r - 1, total_non_m);
+    
+    const double* P_row = &vdP[(r - 1) * m];
+    const double Pm = P_row[m - 1];
+    
+    const double* pDP_old = dp_old.data();
+    double*       pDP_new = dp_new.data();
+    
+    std::fill(viU.begin(), viU.end(), 0);
+    int sum_u = 0;
+    
+    for (std::size_t idx = 0; idx < total_states; ++idx) {
+      stats.dp_states_visited++;
+      
+      const double val = pDP_old[idx];
+      
+      if (val != 0.0 && sum_u >= lo && sum_u <= hi) {
+        
+        // category m
+        pDP_new[idx] += Pm * val;
+        stats.multiplications++;
+        stats.additions++;
+        stats.state_updates++;
+        
+        // categories 1..m-1
+        for (int j = 0; j < d; ++j) {
+          if (viU[j] < viK[j]) {
+            pDP_new[idx + strides[j]] += P_row[j] * val;
+            stats.multiplications++;
+            stats.additions++;
+            stats.state_updates++;
+          }
+        }
+      }
+      
+      // odometer update
+      for (int j = 0; j < d; ++j) {
+        const int uj = ++viU[j];
+        ++sum_u;
+        
+        if (uj < dims[j]) break;
+        
+        sum_u -= uj;
+        viU[j] = 0;
+      }
+    }
+    
+    if (fRescale) {
+      double dScale = 0.0;
+      for (std::size_t idx = 0; idx < total_states; ++idx) {
+        if (pDP_new[idx] > dScale) dScale = pDP_new[idx];
+      }
+      
+      const double dInvScale = 1.0 / dScale;
+      
+      for (std::size_t idx = 0; idx < total_states; ++idx) {
+        pDP_new[idx] *= dInvScale;
+        stats.multiplications++;
+      }
+      
+      dLogRescale += std::log(dScale);
+      stats.log_calls++;
+    }
+    
+    dp_old.swap(dp_new);
+  }
+  
+  return Rcpp::List::create(
+    Rcpp::Named("stats") = Rcpp::List::create(
+      _["state_updates"] = stats.state_updates,
+      _["multiplications"] = stats.multiplications,
+      _["additions"] = stats.additions,
+      _["exp_calls"] = stats.exp_calls,
+      _["log_calls"] = stats.log_calls,
+      _["dp_states_visited"] = stats.dp_states_visited
+    )
+  );
+}
+
+
 
 // log conditional likelihood log L(lambda,s)
 double logCL(const std::vector<double>& vdLambda,
